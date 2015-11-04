@@ -1,0 +1,63 @@
+<html><body></body><link rel="import" href="../../bower_components/polymer/polymer.html"/><link href='https://fonts.googleapis.com/css?family=Roboto+Mono:400,500' rel='stylesheet' type='text/css'>  <dom-module id="sb-game"><template><style>:host {
+  display: block;
+  width: 100%;
+  color: white;
+  background: black;
+  font-family: 'Roboto Mono';
+  line-height: 1em;
+}
+
+.col {
+  display: inline-block;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.col > .cell {
+  display: block;
+  width: 1em;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0;
+  margin: 0;
+}
+</style><template id="sb-screen" is="dom-repeat" items="{{renderData}}" as="col"><ul class="col"><template is="dom-repeat" items="{{col}}" as="cell"><li class="cell">{{cell}}</li></template></ul></template></template><script>(function() {
+  'use strict';
+  Polymer({
+    is: 'sb-game',
+
+    properties: {
+      gameProcess: {
+        type: Array,
+        notify: true
+      },
+
+      renderData: {
+        type: Array,
+        notify: true,
+        value: []
+      }
+    },
+
+    setRenderData: function(renderData) {
+      this.renderData = renderData;
+    },
+
+    stopRender: function() {
+      clearInterval(this.gameProcess);
+      console.log('stopped rendering');
+    },
+
+    ready: function() {
+      Main.setup();
+
+      var self = this;
+      this.gameProcess = setInterval(function() {
+        self.set('renderData', window.Main.render());
+        //- console.log('rendered');
+      }, 1000/ 25);
+      console.log('started rendering');
+    }
+  });
+})();</script><script src="scripts/game.js"></script></dom-module></html>
