@@ -27,6 +27,7 @@ var polybuild = require('polybuild');
 var jade = require('gulp-jade');
 var stylus = require('gulp-stylus');
 var concat = require('gulp-concat');
+var uglify = require('gulp-uglify');
 
 var AUTOPREFIXER_BROWSERS = [
   'ie >= 10',
@@ -116,13 +117,13 @@ gulp.task('game', function () {
       'app/elements/sb-game/src/primitives/Point.js',
       'app/elements/sb-game/src/primitives/Boundaries.js',
       'app/elements/sb-game/src/primitives/Cell.js',
-      'app/elements/sb-game/src/primitives/BuilderManager.js',
       'app/elements/sb-game/src/primitives/Matrix.js',
+      'app/elements/sb-game/src/primitives/Room.js',
       'app/elements/sb-game/src/primitives/Builder.js',
+      'app/elements/sb-game/src/primitives/BuilderManager.js',
       'app/elements/sb-game/src/classes/Tunneler.js',
       'app/elements/sb-game/src/classes/Waller.js',
       'app/elements/sb-game/src/classes/Roomer.js',
-      'app/elements/sb-game/src/classes/Room.js',
       'app/elements/sb-game/src/classes/Module.js',
       'app/elements/sb-game/src/classes/Ship.js',
       'app/elements/sb-game/src/Main.js', 
@@ -139,6 +140,13 @@ gulp.task('styles', function () {
 
 gulp.task('elements', function () {
   return styleTask('elements', ['**/*.css']);
+});
+
+//Uglify scripts
+gulp.task('scripts', function () {
+  gulp.src('app/scripts/*')
+    .pipe(uglify())
+    .pipe(gulp.dest('dist/scripts'));
 });
 
 // Lint JavaScript
@@ -177,11 +185,16 @@ gulp.task('copy', function () {
     'bower_components/**/*'
   ]).pipe(gulp.dest('dist/bower_components'));
 
-  var elements = gulp.src(['app/elements/**/*.html',
-                           'app/elements/**/*.css',
-                           'app/elements/**/*.js',
-                           '!app/elements/sb-game/src/**'])
+  var elements = gulp.src([
+    'app/elements/**/*.html',
+    'app/elements/**/*.css',
+    'app/elements/**/*.js',
+    '!app/elements/sb-game/src/**'])
     .pipe(gulp.dest('dist/elements'));
+
+  var scripts = gulp.src([
+    'app/scripts/*'
+  ]).pipe(gulp.dest('dist/scripts'));
 
   var swBootstrap = gulp.src(['bower_components/platinum-sw/bootstrap/*.js'])
     .pipe(gulp.dest('dist/elements/bootstrap'));
@@ -335,9 +348,9 @@ gulp.task('default', ['clean'], function (cb) {
   // Uncomment 'cache-config' after 'rename-index' if you are going to use service workers.
   runSequence(
     ['jade', 'stylus', 'game'],
-    ['copy', 'styles'],
+    ['scripts', 'styles', 'images', 'fonts', 'html'],
     'elements',
-    ['jshint', 'images', 'fonts', 'html'],
+    'copy',
     'vulcanize','rename-index', 'remove-old-build-index', // 'cache-config',
     cb);
 });

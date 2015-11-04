@@ -284,73 +284,6 @@ Cell.defaults = {
   itens: []
 };
 
-function BuilderManager(tgtMatrix) {
-  'use strict';
-
-  this.tgtMatrix = tgtMatrix;
-  this.builders = {
-    current: [],
-    stash: []
-  };  
-}
-
-BuilderManager.prototype.addBuilder = function(type, pos, options) {
-  var builders = this.builders;
-  var builder = new window[type](this, pos, options);
-
-  if(this.builders.current.length === 0) {
-    builders.current.push(builder);
-  } else {
-    builders.stash.push(builder);
-  }
-};
-
-BuilderManager.prototype.recycle = function() {
-  var builders = this.builders;
-
-  for(var b = builders.current.length - 1; b >= 0; b--) {
-    if(builders.current[b].alive === false) {
-      builders.current.splice(b, 1);
-    }
-  }
-
-  if(builders.current.length === 0) {
-    builders.current = builders.stash;
-    builders.stash = [];
-    console.log('end of generation');
-  }
-};
-
-BuilderManager.prototype.build = function() {
-  // var builders = this.builders;
-
-  // while(builders.current.length > 0) {
-  //   for(var b in builders.current) {
-  //     builders.current[b].work();
-  //   }
-  //   this.recycle();
-  // }
-
-  var self = this;
-  var i = setInterval(function() {
-    var builders = self.builders;
-
-    if(builders.current.length > 0) {
-      for(var b in builders.current) {
-        builders.current[b].work();
-      }
-      self.recycle();
-    } else {
-      clearInterval(i);
-      console.log('stopped building');
-    }
-  }, 100);
-  console.log('started building');
-};
-
-BuilderManager.prototype.addTunneler = function() {
-  this.addBuilder('Tunneler', undefined, {paddings: this.tgtMatrix.paddings});
-};
 function Matrix(boundaries, paddings) {
   'use strict';
   
@@ -901,6 +834,73 @@ Builder.prototype.checkTurn = function(pos) {
   }
 };
 
+function BuilderManager(tgtMatrix) {
+  'use strict';
+
+  this.tgtMatrix = tgtMatrix;
+  this.builders = {
+    current: [],
+    stash: []
+  };  
+}
+
+BuilderManager.prototype.addBuilder = function(type, pos, options) {
+  var builders = this.builders;
+  var builder = new window[type](this, pos, options);
+
+  if(this.builders.current.length === 0) {
+    builders.current.push(builder);
+  } else {
+    builders.stash.push(builder);
+  }
+};
+
+BuilderManager.prototype.recycle = function() {
+  var builders = this.builders;
+
+  for(var b = builders.current.length - 1; b >= 0; b--) {
+    if(builders.current[b].alive === false) {
+      builders.current.splice(b, 1);
+    }
+  }
+
+  if(builders.current.length === 0) {
+    builders.current = builders.stash;
+    builders.stash = [];
+    console.log('end of generation');
+  }
+};
+
+BuilderManager.prototype.build = function() {
+  // var builders = this.builders;
+
+  // while(builders.current.length > 0) {
+  //   for(var b in builders.current) {
+  //     builders.current[b].work();
+  //   }
+  //   this.recycle();
+  // }
+
+  var self = this;
+  var i = setInterval(function() {
+    var builders = self.builders;
+
+    if(builders.current.length > 0) {
+      for(var b in builders.current) {
+        builders.current[b].work();
+      }
+      self.recycle();
+    } else {
+      clearInterval(i);
+      console.log('stopped building');
+    }
+  }, 100);
+  console.log('started building');
+};
+
+BuilderManager.prototype.addTunneler = function() {
+  this.addBuilder('Tunneler', undefined, {paddings: this.tgtMatrix.paddings});
+};
 function Tunneler(manager, pos, options) {
   options = typeof options !== 'undefined' ? options : {};
 
@@ -950,149 +950,6 @@ function Roomer(tgtMatrix, pos) {
 
 Roomer.prototype = Builder.prototype;
 Roomer.prototype.constructor = Roomer;
-
-function Room(size, shape) {
-  'use strict';
-
-  this.size = size;
-  this.shape = shape;
-  this.matrix = Room.genMatrix(size, shape);
-}
-
-Room.size = {
-  medium: function() {
-    var boundaries = new Boundaries(
-      Tool.randRange(3, 5),
-      Tool.randRange(3, 5),
-      1
-    );
-
-    return boundaries;
-  },
-
-  large: function() {
-    var boundaries = new Boundaries(
-      Tool.randRange(5, 8),
-      Tool.randRange(5, 8),
-      Tool.randRange(1, 2)
-    );
-
-    return boundaries;
-  },
-
-  veryLarge: function() {
-    var boundaries = new Boundaries(
-      Tool.randRange(8, 13),
-      Tool.randRange(8, 13),
-      Tool.randRange(2, 3)
-    );
-
-    return boundaries;
-  },
-
-  huge: function() {
-    var boundaries = new Boundaries(
-      Tool.randRange(13, 21),
-      Tool.randRange(13, 21),
-      Tool.randRange(3, 5)
-    );
-
-    return boundaries;
-  }
-};
-
-Room.shape = {
-  rectangle: function(matrix) {
-    matrix.flatten();
-    matrix.fill(Room.geometry.cuboid());
-  },
-
-  cuboid: function(matrix) {
-    matrix.fill(Room.geometry.cuboid());
-  },
-
-  ellipse: function(matrix) {
-    matrix.flatten();
-    matrix.fill(Room.geometry.ellipticCylinder());
-  },
-
-  ellipticCylinder: function(matrix) {
-    matrix.fill(Room.geometry.ellipticCylinder());
-  },
-
-  semiCircle: function(matrix) {
-
-    return matrix;
-  },
-
-  ellipsoid: function(matrix) {
-
-    return matrix;
-  },
-
-  semiSphere: function(matrix) {
-
-    return matrix;
-  },
-
-  torus: function(matrix) {
-
-    return matrix;
-  },
-
-  T: function(matrix) {
-
-    return matrix;
-  },
-
-  Y: function(matrix) {
-
-    return matrix;
-  },
-
-  cross: function(matrix) {
-
-    return matrix;
-  }
-};
-
-Room.geometry = {
-  cuboid: function() {
-    return true;
-  },
-
-  ellipticCylinder: function(matrix, x, y) {
-    return Math.pow((x + 0.5 - matrix.boundaries.x / 2) / (matrix.boundaries.x / 2), 2) + Math.pow((y + 0.5 - matrix.boundaries.y / 2) / (matrix.boundaries.y / 2), 2) <= 1;
-  }
-};
-
-Room.prototype.expand = function(radius) {
-  return this.matrix.expand(radius);
-};
-
-Room.genBoundaries = function(size) {
-  var boundaries;
-  if(size === 'random') {
-    boundaries = Tool.randAttr(Room.size)();
-  } else {
-    boundaries = Room.size[size]();
-  }
-
-  return boundaries;
-};
-
-Room.genMatrix = function(size, shape) {
-  var boundaries = Room.genBoundaries(size);
-
-  var matrix = new Matrix(boundaries);
-  Room.genShape(matrix, shape);
-
-  return matrix;
-};
-
-Room.genShape = function(matrix, shape) {
-  Room.getRule('shape', shape)(matrix);
-};
 
 function Module(type, size) {
   'use strict';
