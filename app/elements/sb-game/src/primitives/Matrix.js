@@ -9,8 +9,6 @@ function Matrix(boundaries, paddings) {
   this.center = this.getCenter(this);
   this.volume = this.getVolume(this);
   this.paddings = paddings;
-  this.builderManager = new BuilderManager(this);
-  this.builders = [];
 }
 
 Matrix.defaults = {
@@ -27,7 +25,7 @@ Matrix.genBody = function(boundaries) {
     for (var y = 0; y < boundaries.y; y++) {
       body[x][y] = [];
       for (var z = 0; z < boundaries.z; z++) {
-        body[x][y][z] = false;
+        body[x][y][z] = new Cell();
       }
     }
   }
@@ -132,10 +130,10 @@ Matrix.prototype.trim = function() {
 Matrix.prototype.checkPlacement = function(srcMatrix, pos) {
   var paddings = this.paddings;
   var tgtMatrix = this;
-  srcMatrix = srcMatrix.clone();
-  srcMatrix.expand(paddings);
+  var _srcMatrix = srcMatrix.clone();
+  _srcMatrix.expand(paddings);
 
-  var boundaries = srcMatrix.boundaries;
+  var boundaries = _srcMatrix.boundaries;
   var _x;
   var _y;
   var _z;
@@ -149,7 +147,14 @@ Matrix.prototype.checkPlacement = function(srcMatrix, pos) {
           for(var z = 0; z < boundaries.z; z++) {
             _z = pos.z + z - paddings;
             if(typeof tgtMatrix.body[_x][_y][_z] !== 'undefined') {
-              if(tgtMatrix.body[_x][_y][_z] === true && srcMatrix.body[x][y][z] === true) {
+              if(
+                tgtMatrix.body[_x][_y][_z].type !== 'void' && 
+                _srcMatrix.body[x][y][z].type !== 'void' &&
+                _srcMatrix.body[x][y][z].id !== tgtMatrix.body[_x][_y][_z].id
+              ) {
+                if(_srcMatrix.body[x][y][z].type === tgtMatrix.body[_x][_y][_z].type) {
+                  console.log(tgtMatrix.body[_x][_y][_z].type);
+                }
                 return false;
               }
             }
@@ -167,6 +172,7 @@ Matrix.prototype.checkPlacement = function(srcMatrix, pos) {
 };
 
 Matrix.prototype.expand = function(radius) {
+  var a = this.body;
   radius = typeof radius !== 'undefined' ? radius : 1;
   
   var boundaries = this.boundaries;
@@ -175,19 +181,21 @@ Matrix.prototype.expand = function(radius) {
     boundaries.y + (radius * 2),
     boundaries.z + (radius * 2)
   ));
-
   var point = new Point( radius, radius, radius);
   this.transferTo(expanded, point);
 
   var temp = expanded.clone();
 
-
   temp.iterate(function(m, x, y, z ,r) {
-    if(m.body[x][y][z] === true) {
+    var cell = m.body[x][y][z];
+
+    if(cell.type !== 'void') {
+      var clone = cell.clone();
+
       for(var _x = x - r; _x <= x + r; _x++) {
         for(var _y = y - r; _y <= y + r; _y++) {
           for(var _z = z - r; _z <= z + r; _z++) {
-            expanded.body[_x][_y][_z] = true;
+            expanded.body[_x][_y][_z] = clone;
           }
         }
       }
@@ -207,8 +215,10 @@ Matrix.prototype.transferTo = function(destMatrix, point) {
     var _x = p.x + x;
     var _y = p.y + y;
     var _z = p.z + z;
+    var cell = m.body[x][y][z];
+    var clone = cell.clone();
 
-    destMatrix.body[_x][_y][_z] = matrix.body[x][y][z];
+    destMatrix.body[_x][_y][_z] = clone;
   }, point);
 
   destMatrix.update();
@@ -279,7 +289,7 @@ Matrix.prototype.randPos = function(xRange, yRange, zRange) {
 
 Matrix.prototype.contains = function(pos, excludePaddings) {
   excludePaddings = typeof excludePaddings !== 'undefined' ? excludePaddings : false;
-
+  
   if(
     typeof this.body[pos.x] !== 'undefined' &&
     typeof this.body[pos.x][pos.y] !== 'undefined' &&
