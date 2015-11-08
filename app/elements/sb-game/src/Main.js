@@ -24,11 +24,8 @@ Main.render = function() {
     for (var x = 0; x < tgtMatrix.body.length; x++) {
       renderData.push([]);
       for (var y = 0; y < tgtMatrix.body[x].length; y++) {
-        if(tgtMatrix.body[x][y][0].wall === false) {
-          renderData[x].push('.');
-        } else {
-          renderData[x].push('|');
-        }
+        var cell = tgtMatrix.body[x][y][0];
+          renderData[x].push(cell.tile);
       }
     }
   }

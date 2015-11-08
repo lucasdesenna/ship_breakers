@@ -117,6 +117,7 @@ gulp.task('game', function () {
       'app/elements/sb-game/src/primitives/Point.js',
       'app/elements/sb-game/src/primitives/Boundaries.js',
       'app/elements/sb-game/src/primitives/Cell.js',
+      'app/elements/sb-game/src/cells/*.js',
       'app/elements/sb-game/src/primitives/Matrix.js',
       'app/elements/sb-game/src/primitives/Room.js',
       'app/elements/sb-game/src/primitives/Builder.js',
@@ -155,8 +156,7 @@ gulp.task('jshint', function () {
       'app/scripts/**/*.js',
       'app/elements/**/*.js',
       '!app/elements/sb-game/src/**/*.js',
-      'app/elements/**/*.html',
-      'gulpfile.js'
+      'app/elements/**/*.html'
     ])
     .pipe($.jshint.extract()) // Extract JS from .html files
     .pipe($.jshint())

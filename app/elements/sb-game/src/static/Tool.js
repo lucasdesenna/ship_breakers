@@ -48,6 +48,25 @@ Tool.randAttr = function(object, filter) {
   return object[attr];
 };
 
+Tool.weightedRandAttr = function(object, chances) {
+  var _chances = chances.slice(0);
+
+  for(var c = 1; c < _chances.length; c++) {
+    _chances[c] += _chances[c - 1];
+  }
+
+  var roll = Tool.randRange(1, _chances[_chances.length - 1]);
+
+  for(var o = 1; o < object.length; o++) {
+
+    if(roll > _chances[o - 1] && roll <= _chances[o]) {
+      return object[o]; 
+    }
+  }
+
+  return  object[0];
+};
+
 Tool.randDirection = function() {
   return Tool.randAttr(['up', 'right', 'down', 'left']); 
 };
@@ -83,4 +102,8 @@ Tool.randRule = function(codici, ruleSet, filter) {
   var rule = Tool.randAttr(realRuleSet, filter);
   
   return rule;
+};
+
+Tool.clone = function(object) {
+  return JSON.parse(JSON.stringify(object));
 };

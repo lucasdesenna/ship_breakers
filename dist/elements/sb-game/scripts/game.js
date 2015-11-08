@@ -48,6 +48,25 @@ Tool.randAttr = function(object, filter) {
   return object[attr];
 };
 
+Tool.weightedRandAttr = function(object, chances) {
+  var _chances = chances.slice(0);
+
+  for(var c = 1; c < _chances.length; c++) {
+    _chances[c] += _chances[c - 1];
+  }
+
+  var roll = Tool.randRange(1, _chances[_chances.length - 1]);
+
+  for(var o = 1; o < object.length; o++) {
+
+    if(roll > _chances[o - 1] && roll <= _chances[o]) {
+      return object[o]; 
+    }
+  }
+
+  return  object[0];
+};
+
 Tool.randDirection = function() {
   return Tool.randAttr(['up', 'right', 'down', 'left']); 
 };
@@ -83,6 +102,10 @@ Tool.randRule = function(codici, ruleSet, filter) {
   var rule = Tool.randAttr(realRuleSet, filter);
   
   return rule;
+};
+
+Tool.clone = function(object) {
+  return JSON.parse(JSON.stringify(object));
 };
 
 function Tiles(which) {
@@ -163,42 +186,72 @@ Point.prototype.flatten = function() {
   );
 };
 
-Point.prototype.up = function() {
-  return new Point(this.x, this.y - 1, this.z);
+Point.prototype.up = function(steps) {
+  steps = typeof steps !== 'undefined' ? steps : 1;
+
+  return new Point(this.x, this.y - steps, this.z);
 };
 
-Point.prototype.right = function() {
-  return new Point(this.x + 1, this.y, this.z);
+Point.prototype.right = function(steps) {
+  steps = typeof steps !== 'undefined' ? steps : 1;
+
+  return new Point(this.x + steps, this.y, this.z);
 };
 
-Point.prototype.down = function() {
-  return new Point(this.x, this.y + 1, this.z);
+Point.prototype.down = function(steps) {
+  steps = typeof steps !== 'undefined' ? steps : 1;
+
+  return new Point(this.x, this.y + steps, this.z);
 };
 
-Point.prototype.left = function() {
-  return new Point(this.x - 1, this.y, this.z);
+Point.prototype.left = function(steps) {
+  steps = typeof steps !== 'undefined' ? steps : 1;
+
+  return new Point(this.x - steps, this.y, this.z);
 };
 
 Point.prototype.neighbors = function(radius, flat) {
+  radius = typeof radius !== 'undefined' ? radius: 1;
   flat = typeof flat !== 'undefined' ? flat : true;
 
   var neighbors = [];
   
   for(var _x = this.x - radius; _x <= this.x + radius; _x++) {
-      for(var _y = this.y - radius; _y <= this.y + radius; _y++) {
-        if(flat === false) {
-          for(var _z = this.z - radius; _z <= this.y + radius; _z++) {
-            if(this.x !== _x || this.y !== _y || this.z !== _z) {
-              neighbors.push(new Point(_x, _y, _z));
-            }
+    for(var _y = this.y - radius; _y <= this.y + radius; _y++) {
+      if(flat === false) {
+        for(var _z = this.z - radius; _z <= this.y + radius; _z++) {
+          if(this.x !== _x || this.y !== _y || this.z !== _z) {
+            neighbors.push(new Point(_x, _y, _z));
           }
-        } else {
-          if(this.x !== _x || this.y !== _y) {
-            neighbors.push(new Point(_x, _y, this.z));
-          }
+        }
+      } else {
+        if(this.x !== _x || this.y !== _y) {
+          neighbors.push(new Point(_x, _y, this.z));
         }
       }
     }
+  }
+
+  return neighbors;
+};
+
+Point.prototype.neighborsInAxis = function(axis, radius) {
+  radius = typeof radius !== 'undefined' ? radius: 1;
+
+  var neighbors = [];
+
+  for(var i = this[axis] - radius; i <= this[axis] + radius; i++) {
+    var n; 
+    if(axis === 'x') {
+      n = new Point(i, this.y, this.z);
+    } else if(axis === 'y') {
+      n = new Point(this.x, i, this.z);
+    } else if(axis === 'z') {
+      n = new Point(this.x, this.y, i);
+    }
+
+    neighbors.push(n);
+  }
 
   return neighbors;
 };
@@ -260,30 +313,96 @@ Boundaries.prototype.update = function(x, y, z) {
   return this;
 };
 
-function Cell(wall, floor, isRoom, furniture, itens) {
+function Cell(id, type, entities) {
   'use strict';
 
-  wall = typeof wall !== 'undefined' ? wall : Cell.defaults.wall;
-  isRoom = typeof isRoom !== 'undefined' ? isRoom : Cell.defaults.isRoom;
-  floor = typeof floor !== 'undefined' ? floor : Cell.defaults.floor;
-  furniture = typeof furniture !== 'undefined' ? furniture : Cell.defaults.furniture;
-  itens = typeof itens !== 'undefined' ? itens : Cell.defaults.itens;
+  id = typeof id !== 'undefined' ? id : Cell.defaults.id;
+  type = typeof type !== 'undefined' ? type : Cell.defaults.type;
+  entities = typeof entities !== 'undefined' ? entities : {};
+  entities.tile = typeof entities.tile !== 'undefined' ? entities.tile : Cell.defaults.tile;
+  entities.itens = typeof entities.itens !== 'undefined' ? entities.itens : [];
+  entities.furniture = typeof entities.furniture !== 'undefined' ? entities.furniture : [];
+  entities.characters = typeof entities.characters !== 'undefined' ? entities.characters : [];
 
-  this.wall = wall;
-  this.floor = floor;
-  this.isRoom = isRoom;
-  this.furniture = furniture;
-  this.itens = itens;
+  this.id = id;
+  this.type = type;
+  this.tile = entities.tile;
+  this.itens = entities.itens;
+  this.furniture = entities.furniture;
+  this.characters = entities.characters;
 }
 
 Cell.defaults = {
-  isRoom: false,
-  wall: true,
-  floor: true,
-  furniture: null,
-  itens: []
+  id: 'void',
+  type: 'void',
+  tile: '|'
 };
 
+Cell.prototype.clone = function() {
+  var entities = {
+    tile: this.tile,
+    itens: this.itens,
+    furniture: this.furniture,
+    characters: this.characters
+  }
+
+  var clone = new Cell(this.id, this.type, entities);
+
+  return clone;
+}
+
+function Corridor(id, entities) {
+  'use strict';
+  
+  entities = typeof entities !== 'undefined' ? entities : {};
+  entities.tile = 'C';
+
+  Cell.call(this, id, 'corridor', entities);
+}
+
+Corridor.prototype = Object.create(Cell.prototype);
+Corridor.prototype.constructor = Corridor;
+
+Corridor.prototype.clone = function() {
+  var constructor = this.constructor;
+
+  var entities = {
+    tile: this.tile,
+    itens: this.itens,
+    furniture: this.furniture,
+    characters: this.characters
+  }
+
+  var clone = new Corridor(this.id, entities);
+
+  return clone;
+}
+function RoomCell(id, entities) {
+  'use strict';
+
+  entities = typeof entities !== 'undefined' ? entities : {};
+  entities.tile = 'R';
+
+  Cell.call(this, id, 'room', entities);
+}
+
+RoomCell.prototype = Object.create(Cell.prototype);
+RoomCell.prototype.constructor = RoomCell;
+
+RoomCell.prototype.clone = function() {
+  var constructor = this.constructor;
+
+  var entities = {
+    tile: this.tile,
+    itens: this.itens,
+    furniture: this.furniture,
+    characters: this.characters
+  }
+
+  var clone = new RoomCell(this.id, entities);
+
+  return clone;
+}
 function Matrix(boundaries, paddings) {
   'use strict';
   
@@ -295,8 +414,6 @@ function Matrix(boundaries, paddings) {
   this.center = this.getCenter(this);
   this.volume = this.getVolume(this);
   this.paddings = paddings;
-  this.builderManager = new BuilderManager(this);
-  this.builders = [];
 }
 
 Matrix.defaults = {
@@ -313,7 +430,7 @@ Matrix.genBody = function(boundaries) {
     for (var y = 0; y < boundaries.y; y++) {
       body[x][y] = [];
       for (var z = 0; z < boundaries.z; z++) {
-        body[x][y][z] = false;
+        body[x][y][z] = new Cell();
       }
     }
   }
@@ -418,10 +535,10 @@ Matrix.prototype.trim = function() {
 Matrix.prototype.checkPlacement = function(srcMatrix, pos) {
   var paddings = this.paddings;
   var tgtMatrix = this;
-  srcMatrix = srcMatrix.clone();
-  srcMatrix.expand(paddings);
+  var _srcMatrix = srcMatrix.clone();
+  _srcMatrix.expand(paddings);
 
-  var boundaries = srcMatrix.boundaries;
+  var boundaries = _srcMatrix.boundaries;
   var _x;
   var _y;
   var _z;
@@ -435,7 +552,14 @@ Matrix.prototype.checkPlacement = function(srcMatrix, pos) {
           for(var z = 0; z < boundaries.z; z++) {
             _z = pos.z + z - paddings;
             if(typeof tgtMatrix.body[_x][_y][_z] !== 'undefined') {
-              if(tgtMatrix.body[_x][_y][_z] === true && srcMatrix.body[x][y][z] === true) {
+              if(
+                tgtMatrix.body[_x][_y][_z].type !== 'void' && 
+                _srcMatrix.body[x][y][z].type !== 'void' &&
+                _srcMatrix.body[x][y][z].id !== tgtMatrix.body[_x][_y][_z].id
+              ) {
+                if(_srcMatrix.body[x][y][z].type === tgtMatrix.body[_x][_y][_z].type) {
+                  console.log(tgtMatrix.body[_x][_y][_z].type);
+                }
                 return false;
               }
             }
@@ -453,6 +577,7 @@ Matrix.prototype.checkPlacement = function(srcMatrix, pos) {
 };
 
 Matrix.prototype.expand = function(radius) {
+  var a = this.body;
   radius = typeof radius !== 'undefined' ? radius : 1;
   
   var boundaries = this.boundaries;
@@ -461,19 +586,21 @@ Matrix.prototype.expand = function(radius) {
     boundaries.y + (radius * 2),
     boundaries.z + (radius * 2)
   ));
-
   var point = new Point( radius, radius, radius);
   this.transferTo(expanded, point);
 
   var temp = expanded.clone();
 
-
   temp.iterate(function(m, x, y, z ,r) {
-    if(m.body[x][y][z] === true) {
+    var cell = m.body[x][y][z];
+
+    if(cell.type !== 'void') {
+      var clone = cell.clone();
+
       for(var _x = x - r; _x <= x + r; _x++) {
         for(var _y = y - r; _y <= y + r; _y++) {
           for(var _z = z - r; _z <= z + r; _z++) {
-            expanded.body[_x][_y][_z] = true;
+            expanded.body[_x][_y][_z] = clone;
           }
         }
       }
@@ -493,8 +620,10 @@ Matrix.prototype.transferTo = function(destMatrix, point) {
     var _x = p.x + x;
     var _y = p.y + y;
     var _z = p.z + z;
+    var cell = m.body[x][y][z];
+    var clone = cell.clone();
 
-    destMatrix.body[_x][_y][_z] = matrix.body[x][y][z];
+    destMatrix.body[_x][_y][_z] = clone;
   }, point);
 
   destMatrix.update();
@@ -565,7 +694,7 @@ Matrix.prototype.randPos = function(xRange, yRange, zRange) {
 
 Matrix.prototype.contains = function(pos, excludePaddings) {
   excludePaddings = typeof excludePaddings !== 'undefined' ? excludePaddings : false;
-
+  
   if(
     typeof this.body[pos.x] !== 'undefined' &&
     typeof this.body[pos.x][pos.y] !== 'undefined' &&
@@ -592,77 +721,264 @@ Matrix.prototype.contains = function(pos, excludePaddings) {
 
   return false;
 };
-function Builder(manager, type, job, pos, options) {
+function Room(id, size, shape) {
+  'use strict';
+  this.id = id;
+  this.size = size;
+  this.shape = shape;
+  this.matrix = Room.gen.matrix(id, size, shape);
+}
+
+Room.gen = {
+  matrix: function(id, size, shape) {
+    var boundaries = Room.gen.boundaries(size);
+
+    var matrix = new Matrix(boundaries);
+    Room.gen.shape(matrix, shape);
+
+    matrix.iterate(function(m, x, y, z) {
+      var cell = m.body[x][y][z];
+      if(cell.type === 'room') {
+        cell.id = id;
+      }
+    });
+
+    return matrix;
+  },
+
+  boundaries: function(size) {
+    var boundaries;
+    if(size === 'random') {
+      boundaries = Tool.randAttr(Room.gen.size)();
+    } else {
+
+      boundaries = Room.gen.size[size]();
+    }
+
+    return boundaries;
+  },
+
+  size: {
+    small: function() {
+      var boundaries = new Boundaries(
+        Tool.randAttr([3, 5]),
+        Tool.randAttr([3, 5]),
+        Tool.randAttr([1, 3])
+      );
+
+      return boundaries;
+    },
+
+    medium: function() {
+      var boundaries = new Boundaries(
+        Tool.randAttr([5, 7]),
+        Tool.randAttr([5, 7]),
+        Tool.randAttr([1, 3, 5])
+      );
+
+      return boundaries;
+    },
+
+    large: function() {
+      var boundaries = new Boundaries(
+        Tool.randAttr([7, 9, 11]),
+        Tool.randAttr([7, 9, 11]),
+        Tool.randAttr([1, 3, 5, 7])
+      );
+
+      return boundaries;
+    },
+
+    huge: function() {
+      var boundaries = new Boundaries(
+        Tool.randAttr([11, 13, 15, 17, 19, 21]),
+        Tool.randAttr([11, 13, 15, 17, 19, 21]),
+        Tool.randAttr([3, 5, 7, 9])
+      );
+
+      return boundaries;
+    }
+  },
+
+  shape: function(matrix, shape) {
+    if(shape === 'random') {
+      Tool.randAttr(Room.gen.shapes)(matrix);
+    } else {
+      Room.gen.shapes[shape](matrix);
+    }
+  },
+
+  shapes: {
+    rectangle: function(matrix) {
+      matrix.flatten();
+      matrix.fill(Room.gen.geometry.cuboid);
+    },
+
+    cuboid: function(matrix) {
+      matrix.fill(Room.gen.geometry.cuboid);
+    },
+
+    ellipse: function(matrix) {
+      matrix.flatten();
+      matrix.fill(Room.gen.geometry.ellipticCylinder);
+    },
+
+    ellipticCylinder: function(matrix) {
+      matrix.fill(Room.gen.geometry.ellipticCylinder);
+    },
+
+    semiCircle: function(matrix) {
+
+      return matrix;
+    },
+
+    ellipsoid: function(matrix) {
+
+      return matrix;
+    },
+
+    semiSphere: function(matrix) {
+
+      return matrix;
+    },
+
+    torus: function(matrix) {
+
+      return matrix;
+    },
+
+    T: function(matrix) {
+
+      return matrix;
+    },
+
+    Y: function(matrix) {
+
+      return matrix;
+    },
+
+    cross: function(matrix) {
+
+      return matrix;
+    }
+  },
+
+  geometry: {
+    cuboid: function(matrix) {
+      return new RoomCell();
+    },
+
+    ellipticCylinder: function(matrix, x, y) {
+      if(Math.pow((x - 0.5 - matrix.boundaries.x / 2) / (matrix.boundaries.x / 2), 2) + Math.pow((y - 0.5 - matrix.boundaries.y / 2) / (matrix.boundaries.y / 2), 2) <= 1) {
+        return new RoomCell();
+      } else {
+        return new Cell();
+      }
+      
+    }
+  }
+};
+
+Room.prototype.expand = function(radius) {
+  return this.matrix.expand(radius);
+};
+
+function Builder(manager, job, jobCondition, options) {
   'use strict';
 
-  pos = typeof pos !== 'undefined' ? pos : Builder.defaults.pos(manager.tgtMatrix);
+  job = typeof job !== 'undefined' ? job : Builder.defaults.job;
+  jobCondition = typeof jobCondition !== 'undefined' ? jobCondition : Builder.defaults.jobCondition;
+
   options = typeof options !== 'undefined' ? options : {};
-  options.life = typeof options.life !== 'undefined' ? options.life : Builder.defaults.life(manager.tgtMatrix);
-  options.steps = typeof options.steps !== 'undefined' ? options.steps : Builder.defaults.steps;
-  options.width = typeof options.width !== 'undefined' ? options.width : Builder.defaults.width;
+  options.type = typeof options.type !== 'undefined' ? options.type : Builder.defaults.type;
   options.paddings = typeof options.paddings !== 'undefined' ? options.paddings : Builder.defaults.paddings;
+  options.life = typeof options.life !== 'undefined' ? options.life : Builder.defaults.life(manager.tgtMatrix);
+  options.speed = typeof options.speed !== 'undefined' ? options.speed : Builder.defaults.speed;
+  options.width = typeof options.width !== 'undefined' ? options.width : Builder.defaults.width;
+  options.dodgy = typeof options.dodgy !== 'undefined' ? options.dodgy : Builder.defaults.dodgy;
   options.chanceToTurn = typeof options.chanceToTurn !== 'undefined' ? options.chanceToTurn : Builder.defaults.chanceToTurn;
   options.chanceToSpawn = typeof options.chanceToSpawn !== 'undefined' ? options.chanceToSpawn : Builder.defaults.chanceToSpawn;
-  options.jobCondition = typeof options.jobCondition !== 'undefined' ? options.jobCondition : Builder.defaults.jobCondition();
   
   this.manager = manager;
+  this.id = manager.buildersCount;
   this.tgtMatrix = manager.tgtMatrix;
-  this.type = type;
   this.job = job;
-  this.pos = pos;
-
-  this.life = options.life;
-  this.steps = options.steps;
-  this.width = options.width;
-  this.paddings = options.paddings;
-  this.jobCondition = options.jobCondition;
-  this.chanceToTurn = options.chanceToTurn;
-  this.chanceToSpawn = options.chanceToSpawn;
-  this.jobCondition = options.jobCondition;
-  
-  this.maxChildren = Builder.defaults.maxChildren;
-  this.direction = Builder.defaults.direction(this);
+  this.jobCondition = jobCondition;
   this.alive = true;
+  this.options = options;
+  
+  options.startingPos = typeof options.startingPos !== 'undefined' ? options.startingPos : Builder.defaults.startingPos(this);
+  this.pos = options.startingPos;
+
+  options.startingDir = typeof options.startingDir !== 'undefined' ? options.startingDir : Builder.defaults.startingDir(this);
+  this.direction =  options.startingDir;
+
+  this.primaryAxis = '';
+  this.secondaryAxis = '';
+  this.setAxis();
 }
 
 Builder.defaults = {
-  pos: function(tgtMatrix) {
-    return tgtMatrix.randPos([this.paddings, tgtMatrix.boundaries.x - this.paddings - 1], [this.paddings, tgtMatrix.boundaries.y - this.paddings - 1], [0, 0]);
+  type: 'builder',
+  job: function(builder) { console.log(builder.pos); },
+  jobCondition: function() { return true; },
+  startingPos: function(builder) {
+    var tgtMatrix = builder.tgtMatrix;
+    var paddings = builder.options.paddings;
+
+    return tgtMatrix.randPos([paddings, tgtMatrix.boundaries.x - paddings - 1], [paddings, tgtMatrix.boundaries.y - paddings - 1], [0, 0]);
   },
-  direction: function(builder) {
+  startingDir: function(builder) {
     return Tool.randAttr(builder.possibleDirections());
   },
   life: function(tgtMatrix) {
     var boundaries = tgtMatrix.boundaries;
     var avrgDimension = (boundaries.x + boundaries.y) / 2;
 
-    return Tool.randRange(avrgDimension / 2, avrgDimension);
+    return Tool.randRange(avrgDimension * 0.2, avrgDimension * 0.4);
   },
-  steps: 1,
-  maxChildren: 2,
+  speed: 2,
   width: 1,
-  paddings: 0,
-  chanceToTurn: 3,
-  chanceToSpawn: 3,
-  jobCondition: function() { return true; }
+  dodgy: false,
+  paddings: 1,
+  chanceToTurn: 5,
+  chanceToSpawn: 70,
+};
+
+Builder.prototype.setAxis = function() {
+  var primaryAxis;
+  var secondaryAxis;
+
+  if(this.direction === 'up' || this.direction === 'down') {
+    primaryAxis = 'y';
+    secondaryAxis = 'x';
+  } else {
+    primaryAxis = 'x';
+    secondaryAxis = 'y';
+  }
+
+  this.primaryAxis = primaryAxis;
+  this.secondaryAxis = secondaryAxis;
 };
 
 Builder.prototype.work = function() {
   this.moveOrTurn();
-
-  var builder = this;
-  this.mayDo(this.chanceToSpawn, function() {
-    builder.spawn();
-  });
+  
+  if(this.possibleDirections(this.pos, true).length > 0) {
+    var builder = this;
+    this.mayDo(this.options.chanceToSpawn, function() {
+      builder.spawn();
+    });
+  }
 
   this.age();
 };
 
 Builder.prototype.age = function() {
   if(this.alive) {
-    this.life--;
+    this.options.life--;
 
-    if(this.life <= 0) {
+    if(this.options.life <= 0) {
       // console.log('died of old age');
       this.die();
     }
@@ -687,7 +1003,14 @@ Builder.prototype.possibleDirections = function(pos, excludeCurrentAndReverse) {
     direction = directions[d];
     newPos = pos[direction]();
 
-    if(this.checkPos(newPos) && (!excludeCurrentAndReverse || (excludeCurrentAndReverse && direction !== this.reverseDirection() && direction !== this.direction))) {
+    if(
+      this.checkPos(newPos) && 
+      (!excludeCurrentAndReverse ||
+        (excludeCurrentAndReverse && 
+          direction !== this.reverseDirection() && 
+          direction !== this.direction)
+        )
+    ) {
       pDirections.push(direction);
     }
   } 
@@ -709,6 +1032,7 @@ Builder.prototype.moveOrTurn = function() {
 
   var turn = function(builder, validTurn) {
     builder.direction = validTurn.direction;
+    builder.setAxis();
 
     for(var t in validTurn.path) {
       builder.pos = validTurn.path[t];
@@ -718,23 +1042,29 @@ Builder.prototype.moveOrTurn = function() {
 
   if(this.alive) {
     if(validMove !== false && validTurn !== false) {
-      this.mayDo(this.chanceToTurn, function() {
+      this.mayDo(this.options.chanceToTurn, function() {
         turn(self, validTurn);
       }, function() {
         move(self, validMove);
       });
-    } else if(validMove !== false) {
-      move(self, validMove);
-    } else if(validTurn !== false) {
-      turn(self, validTurn);
+    } else if(this.options.dodgy) {
+      if(validMove !== false) {
+        move(self, validMove);
+      } else if(validTurn !== false) {
+        turn(self, validTurn);
+      } else {
+        this.die();
+      }
     } else {
       this.die();
     }
   }
 };
 
-Builder.prototype.reverseDirection = function() {
-  switch(this.direction) {
+Builder.prototype.reverseDirection = function(direction) {
+  direction = typeof direction !== 'undefined' ? direction : this.direction;
+
+  switch(direction) {
     case 'up':
       return 'down';
     case 'right':
@@ -746,13 +1076,12 @@ Builder.prototype.reverseDirection = function() {
   }
 };
 
-Builder.prototype.spawn = function(type, pos, options) {
+Builder.prototype.spawn = function(type, options) {
   type = typeof type !== 'undefined' ? type : this.type;
-  pos = typeof pos !== 'undefined' ? pos : this.pos;
+  options.startingPos = typeof options.startingPos !== 'undefined' ? options.startingPos : this.pos;
 
-  if(this.alive && this.maxChildren > 0) {
-    this.manager.addBuilder(type, pos, options);
-    this.maxChildren--;
+  if(this.alive) {
+    this.manager.addBuilder(type, options);
     console.log('spawned');
   }
 };
@@ -765,35 +1094,17 @@ Builder.prototype.mayDo = function(chanceToDo, task, otherwise) {
   }
 };
 
-Builder.prototype.checkPos = function(pos) {
-  pos = typeof pos !== 'undefined' ? pos : this.pos;
-
-  if(this.tgtMatrix.contains(pos, true)) {
-    var neighbors = pos.neighbors(this.paddings);
-
-    for(var n in neighbors) {
-      if(!this.tgtMatrix.contains(neighbors[n])) {
-        return false;
-      }
-    }
-  } else {
-    return false;
-  }
-
-  return true;
-};
-
-Builder.prototype.checkMove = function(pos, direction, steps) {
+Builder.prototype.checkMove = function(pos, direction, speed) {
   pos = typeof pos !== 'undefined' ? pos : this.pos;
   direction = typeof direction !== 'undefined' ? direction : this.direction;
-  steps = typeof steps !== 'undefined' ? steps: this.steps;
+  speed = typeof speed !== 'undefined' ? speed: this.options.speed;
 
   var _pos = pos;
   var _direction = direction;
-  var _steps = steps;
+  var _speed = speed;
   var path = [_pos];
 
-  for(_steps; _steps > 0; _steps--) {
+  for(_speed; _speed > 0; _speed--) {
     _pos = _pos[_direction]();
 
     if(this.checkPos(_pos)) {
@@ -820,7 +1131,7 @@ Builder.prototype.checkTurn = function(pos) {
     _pos = pos0;
     direction = pDirections[pD];
 
-    path = this.checkMove(_pos, direction, this.width + this.paddings);
+    path = this.checkMove(_pos, direction, this.options.width + this.options.paddings);
 
     if(path !== false) {
       pathes.push({direction: direction, path: path});
@@ -834,25 +1145,53 @@ Builder.prototype.checkTurn = function(pos) {
   }
 };
 
-function BuilderManager(tgtMatrix) {
+Builder.prototype.checkPos = function(pos) {
+  pos = typeof pos !== 'undefined' ? pos : this.pos;
+
+  if(
+    this.tgtMatrix.contains(pos, true)
+  ) {
+    if(this.jobCondition(this, pos)) {
+      var neighbors = pos.neighbors(this.options.paddings);
+
+      for(var n in neighbors) {
+        if(
+          this.tgtMatrix.contains(neighbors[n]) &&
+          this.jobCondition(this, neighbors[n])
+        ) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+};
+
+function BuilderManager(ship) {
   'use strict';
 
-  this.tgtMatrix = tgtMatrix;
+  this.ship = ship;
+  this.tgtMatrix = ship.matrix;
+  this.buildersCount = 0;
+  this.generation = 0;
   this.builders = {
     current: [],
     stash: []
   };  
 }
 
-BuilderManager.prototype.addBuilder = function(type, pos, options) {
+BuilderManager.prototype.addBuilder = function(type, options) {
   var builders = this.builders;
-  var builder = new window[type](this, pos, options);
+  var builder = new window[type](this, options);
 
   if(this.builders.current.length === 0) {
     builders.current.push(builder);
   } else {
     builders.stash.push(builder);
   }
+
+  this.buildersCount++;
 };
 
 BuilderManager.prototype.recycle = function() {
@@ -867,6 +1206,7 @@ BuilderManager.prototype.recycle = function() {
   if(builders.current.length === 0) {
     builders.current = builders.stash;
     builders.stash = [];
+    this.generation++;
     console.log('end of generation');
   }
 };
@@ -885,7 +1225,7 @@ BuilderManager.prototype.build = function() {
   var i = setInterval(function() {
     var builders = self.builders;
 
-    if(builders.current.length > 0) {
+    if(builders.current.length > 0 && self.ship.blueprints.length > 0) {
       for(var b in builders.current) {
         builders.current[b].work();
       }
@@ -898,58 +1238,226 @@ BuilderManager.prototype.build = function() {
   console.log('started building');
 };
 
-BuilderManager.prototype.addTunneler = function() {
-  this.addBuilder('Tunneler', undefined, {paddings: this.tgtMatrix.paddings});
-};
-function Tunneler(manager, pos, options) {
+BuilderManager.prototype.addTunneler = function(options) {
   options = typeof options !== 'undefined' ? options : {};
+  options.paddings = typeof options.paddings !== 'undefined' ? options.paddings : this.tgtMatrix.paddings;
 
-  options.jobCondition = function(pos) {
-    return manager.tgtMatrix.val(pos).wall === true;
+  this.addBuilder('Tunneler', options);
+};
+
+BuilderManager.prototype.addRoomer = function(options) {
+  options = typeof options !== 'undefined' ? options : {};
+  options.paddings = typeof options.paddings !== 'undefined' ? options.paddings : this.tgtMatrix.paddings;
+
+  this.addBuilder('Roomer', options);
+};
+
+BuilderManager.prototype.placeRoom = function(room, point) {
+  var ship = this.ship;
+  var srcMatrix = room.matrix;
+  var destMatrix = ship.matrix;
+
+  srcMatrix.transferTo(destMatrix, point);
+  this.discartBlueprint();
+  this.logRoom(room, point);
+  // console.log('placed at ' + point.x + ' ' + point.y + ' ' + point.z);
+};
+
+BuilderManager.prototype.logRoom = function(room, point) {
+  var ship = this.ship;
+
+  var log = {
+    room: room,
+    at: point
   };
 
-  //options.width = Tool.randAttr([1, 3]);
+  ship.rooms.push(log);
+};
 
-  Builder.call(this, manager, 'Tunneler', function(tunneler) {
-    var cell = tunneler.tgtMatrix.val(tunneler.pos);
+BuilderManager.prototype.discartBlueprint = function() {
+  this.ship.blueprints.splice(0, 1);
+};
 
-    if(typeof cell === 'object' && cell.isRoom === false) {
-      tunneler.tgtMatrix.val(tunneler.pos, new Cell(false));
-    }
-  }, pos, options);
+function Tunneler(manager, options) {
+  'use strict';
+
+  options = typeof options !== 'undefined' ? options : {};
+  options.type = 'Tunneler';
+  options.width = typeof options.width !== 'undefined' ? options.width : Tunneler.defaults.width();
+
+  Builder.call(this, manager, Tunneler.job, Tunneler.jobCondition, options);
 }
 
-Tunneler.prototype = Builder.prototype;
+Tunneler.defaults = {
+  width: function() {
+    return Tool.randAttr([1, 3]);
+  }
+};
+
+Tunneler.prototype = Object.create(Builder.prototype);
 Tunneler.prototype.constructor = Tunneler;
 
-Tunneler.prototype.spawn = (function(_super) {
-  return function() {
-    _super.call(this, this.type, this.pos, {paddings: this.tgtMatrix.paddings});
-  };
-})(Builder.prototype.spawn);
+Tunneler.genCorridor = function(tunneler) {
+  var id = tunneler.id;
+  var sA = tunneler.secondaryAxis;
+  var width = tunneler.options.width;
+  var boundaries;
 
-function Roomer(tgtMatrix, pos) {
-  Builder.call(this, tgtMatrix, function(roomer) {
-    var cell = roomer.tgtMatrix.val(roomer.pos);
+  if(sA === 'x') {
+    boundaries = new Boundaries(width, 1, 1);
+  } else if(sA === 'y') {
+    boundaries = new Boundaries(1, width, 1);
+  }
 
-    if(typeof cell === 'object' && cell.isRoom === false) {
-      roomer.tgtMatrix.val(roomer.pos, new Cell(false));
-      roomer.mayDo(5, function() {
-        roomer.spawn();
-      });
-      roomer.mayDo(5, function() {
-        roomer.turn();
-      });
-      roomer.move();
-      roomer.age();
-    } else {
-      roomer.die();
+  var corridor = new Matrix(boundaries);
+  corridor.fill(function() {
+    return new Corridor(id);
+  });
+  
+  return corridor;
+};
+
+Tunneler.prototype.spawn = function() {
+  if(this.alive) {
+    var pDirections = this.possibleDirections(this.pos, true);
+    var direction;
+    var types = ['Tunneler', 'Roomer']; 
+    var type;
+    var i = Tool.randRange(0, pDirections.length - 1);
+
+    var offset = Math.ceil(this.options.width / 2);
+
+    for(i; i >= 0; i--) {
+      direction = pDirections[i];
+      type = Tool.weightedRandAttr(['Tunneler', 'Roomer'], Ship.gen.params.corridorsVsRooms);
+
+      switch(type) {
+        case 'Tunneler':
+          this.manager.addTunneler({startingPos: this.pos[direction](offset), startingDir: direction});
+          break;
+
+        case 'Roomer':
+          this.manager.addRoomer({startingPos: this.pos[direction](offset), startingDir: direction});
+          break;
+      }
+
+      console.log('spawned');
     }
-  }, pos);
-}
+  }
+};
 
-Roomer.prototype = Builder.prototype;
+
+Tunneler.job = function(tunneler) {
+  var corridor = tunneler.corridor;
+  var pos = tunneler.pos.toTopLeft(corridor);
+  var tgtMatrix = tunneler.tgtMatrix;
+
+  corridor.transferTo(tgtMatrix, pos);
+};
+
+Tunneler.jobCondition = function(tunneler, pos) {
+  if(tunneler.direction) {
+    tunneler.corridor = Tunneler.genCorridor(tunneler);
+    var tgtMatrix = tunneler.tgtMatrix;
+    var direction = tunneler.direction;
+
+    var _pos = pos[direction]();
+
+    return tgtMatrix.checkPlacement(tunneler.corridor, _pos);
+  } else {
+    return true;
+  }
+};
+
+function Roomer(manager, options) {
+  'use strict';
+
+  options = typeof options !== 'undefined' ? options : {};
+  options.type = 'Roomer';
+
+  Builder.call(this, manager, Roomer.job, Roomer.jobCondition, options);
+} 
+
+Roomer.prototype = Object.create(Builder.prototype);
 Roomer.prototype.constructor = Roomer;
+
+Roomer.prototype.work = function() {
+  if(this.manager.ship.blueprints.length > 0) {
+    this.room = Roomer.genRoom(this);
+
+    if(this.jobCondition(this)) {
+      this.job(this);
+    }
+  }
+  
+  this.die();
+};
+
+Roomer.genRoom = function(roomer) {
+  var id = roomer.id;
+  var size = roomer.manager.ship.blueprints[0];
+
+  return new Room(id, size, 'rectangle'); //CHANGE SHAPE
+};
+
+Roomer.job = function(roomer) {
+  var room = roomer.room;
+  var manager = roomer.manager;
+  var pos = roomer.pos;
+  var roomPos = roomer.roomPlacementPos();
+
+  roomer.buildEntrance(pos);
+  manager.placeRoom(room, roomPos);
+};
+
+Roomer.jobCondition = function(roomer) {
+  var _pos = roomer.roomPlacementPos();
+
+  return roomer.tgtMatrix.checkPlacement(roomer.room.matrix, _pos);
+};
+
+Roomer.prototype.roomPlacementPos = function() {
+  var room = this.room;
+  var _pos = this.pos.toTopLeft(room.matrix);
+  var direction = this.direction;
+  var primaryAxis = this.primaryAxis;
+
+  _pos = _pos[direction](room.matrix.center[primaryAxis] + 1);
+
+  return _pos;
+};
+
+Roomer.prototype.buildEntrance = function(pos) {
+  var secondaryAxis = this.secondaryAxis;
+  var sAxisLength = this.room.matrix.boundaries[secondaryAxis];
+  var maxEntrances = (sAxisLength  - 1) / 2;
+  var entranceCount = Tool.randRange(1, maxEntrances);
+  var entrancePos = pos.neighborsInAxis(secondaryAxis, maxEntrances);
+
+  while(entranceCount > 0 && entrancePos.length > 0) {
+    var selectedPos = Tool.randAttr(entrancePos);
+    var index = entrancePos.indexOf(selectedPos);
+
+    this.tgtMatrix.val(selectedPos, new RoomCell({
+      furniture: ['Door']//change to object
+    }));
+
+    var _index = index;
+    var exclude = 1;
+
+    if(typeof selectedPos[index - 1] !== 'undefined') {
+      _index--;
+      exclude++;
+    }
+
+    if(typeof selectedPos[index + 1] !== 'undefined') {
+      exclude++;
+    }
+    
+    entrancePos.splice(_index, exclude);
+    entranceCount--;
+  }
+};
 
 function Module(type, size) {
   'use strict';
@@ -968,15 +1476,17 @@ function Ship(size, shipClass, faction) {
 
   this.name = 'Forgotten Hull';
   this.size = size;
-  this.roomCount = Ship.gen.roomCount[size]();
   this.shipClass = shipClass;
   this.faction = faction;
   this.age = null;
   this.integrity = null;
-  this.matrix = Ship.genMatrix(this);
+  this.blueprints = Ship.gen.blueprints(size);
   this.rooms = [];
-
-  Ship.populate(this);
+  
+  this.matrix = Ship.gen.matrix(this);
+  this.builderManager = new BuilderManager(this);
+  
+  this.build();
 }
 
 Ship.defaults = {
@@ -987,80 +1497,80 @@ Ship.defaults = {
 };
 
 Ship.gen = {
-  sizeFactor: 5,
-  roomCount: {
-    tiny: function() {
-      return Tool.randRange(5, 8);
-    },
-
-    small: function() {
-      return Tool.randRange(10, 15);
-    },
-
-    medium: function() {
-      return Tool.randRange(20, 30);
-    },
-
-    large: function() {
-      return Tool.randRange(35, 52);
-    },
-
-    veryLarge: function() {
-      return Tool.randRange(55, 82);
-    },
-
-    huge: function() {
-      return Tool.randRange(85, 127);
-    }
+  params: {
+    sizeFactor: 5,
+    roomPaddings: 1,
+    corridorsVsRooms: [20, 80],
   },
-  roomPaddings: 1
+  blueprints: function(size) {
+    var blueprints = [];
+    var roomCount;
+    var roomChance;
+
+    switch(size) {
+      case 'tiny':
+        roomCount = Tool.randRange(5, 8);
+        roomChance = [75, 25, 0, 0];
+        break;
+
+      case 'small':
+        roomCount = Tool.randRange(10, 15);
+        roomChance = [65, 25, 10, 0];
+        break;
+
+      case 'medium':
+        roomCount = Tool.randRange(20, 30);
+        roomChance = [45, 25, 20, 10];
+        break;
+
+      case 'large':
+        roomCount = Tool.randRange(35, 52);
+        roomChance = [30, 30, 25, 15];
+        break;
+
+      case 'huge':
+        roomCount = Tool.randRange(55, 82);
+        roomChance = [15, 35, 30, 20];
+        break;
+
+      case 'colossal':
+        roomCount = Tool.randRange(85, 127);
+        roomChance = [15, 35, 30, 20];
+        break;
+
+      default:
+        roomCount = Tool.randRange(5, 8);
+        roomChance = [75, 25, 0, 0];
+        break;
+    }
+
+    for(roomCount; roomCount > 0; roomCount--) {
+      blueprints.push(Tool.weightedRandAttr(['small', 'medium', 'large', 'huge'], roomChance));
+    }
+
+    return blueprints;
+  },
+  matrix: function(ship, shipClass, faction) {
+    var roomCount = ship.blueprints.length;
+    var boundaries = new Boundaries(
+      roomCount * Ship.gen.params.sizeFactor,
+      roomCount * Ship.gen.params.sizeFactor,
+      21
+    );
+
+    var matrix = new Matrix(boundaries, Ship.gen.params.roomPaddings);
+    matrix.flatten(); //change to enable 3D placement
+    
+    return matrix;
+  }
 };
 
-Ship.genMatrix = function(ship, shipClass, faction) {
-  var boundaries = new Boundaries(
-    ship.roomCount * Ship.gen.sizeFactor,
-    ship.roomCount * Ship.gen.sizeFactor,
-    21
-  );
-
-  var matrix = new Matrix(boundaries, Ship.gen.roomPaddings);
-  matrix.flatten(); //change to enable 3D placement
-  matrix.fill(function() {
-    return new Cell();
-  });
-
-  return matrix;
-};
-
-Ship.prototype.place = function(room, point) {
-  var ship = this;
-  var srcMatrix = room.matrix;
-  var destMatrix = ship.matrix;
-
-  srcMatrix.transferTo(destMatrix, point);
-  // console.log('placed at ' + point.x + ' ' + point.y + ' ' + point.z);
-};
-
-Ship.prototype.pushRoom = function(room, point) {
-  var ship = this;
-
-  var log = {
-    room: room,
-    at: point
-  };
-
-  ship.rooms.push(log);
-  ship.place(room, point);
-};
-
-Ship.populate = function(ship) {
+Ship.prototype.build = function() {
   var simmetry = 'noSimmetry'; //make dynamic and relative to faction
   var placement = 'clustered'; //make dynamic and relative to faction
 
-  ship.addBuilder('Tunneler');
-  // ship.matrix.addBuilder(new Tunneler(ship.matrix));
-  // ship.matrix.addBuilder(new Tunneler(ship.matrix));
-  ship.build();
+  this.builderManager.addTunneler();
+  this.builderManager.build();
 
   // new Tunneler(ship.matrix);
   // new Tunneler(ship.matrix);
@@ -1070,24 +1580,9 @@ Ship.populate = function(ship) {
   //   // ShipGen.getRule('roomPlacement.patterns', 'cluster')(ship, rC);
   // }
   
-  ship.matrix.flatten();
+  this.matrix.flatten();
 
   //matrix.trim(); fix trim
-};
-
-Ship.prototype.addBuilder = function(type) {
-  switch(type) {
-    case 'Tunneler':
-    this.matrix.builderManager.addTunneler();  
-  }
-};
-
-Ship.prototype.rmBuilder = function(builder) {
-  this.matrix.builderManager.rmBuilder(builder);
-};
-
-Ship.prototype.build = function() {
-  this.matrix.builderManager.build();
 };
 
 function Main() {
@@ -1116,11 +1611,8 @@ Main.render = function() {
     for (var x = 0; x < tgtMatrix.body.length; x++) {
       renderData.push([]);
       for (var y = 0; y < tgtMatrix.body[x].length; y++) {
-        if(tgtMatrix.body[x][y][0].wall === false) {
-          renderData[x].push('.');
-        } else {
-          renderData[x].push('|');
-        }
+        var cell = tgtMatrix.body[x][y][0];
+          renderData[x].push(cell.tile);
       }
     }
   }

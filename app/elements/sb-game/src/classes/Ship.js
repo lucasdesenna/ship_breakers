@@ -7,15 +7,17 @@ function Ship(size, shipClass, faction) {
 
   this.name = 'Forgotten Hull';
   this.size = size;
-  this.roomCount = Ship.gen.roomCount[size]();
   this.shipClass = shipClass;
   this.faction = faction;
   this.age = null;
   this.integrity = null;
-  this.matrix = Ship.genMatrix(this);
+  this.blueprints = Ship.gen.blueprints(size);
   this.rooms = [];
-
-  Ship.populate(this);
+  
+  this.matrix = Ship.gen.matrix(this);
+  this.builderManager = new BuilderManager(this);
+  
+  this.build();
 }
 
 Ship.defaults = {
@@ -26,80 +28,80 @@ Ship.defaults = {
 };
 
 Ship.gen = {
-  sizeFactor: 5,
-  roomCount: {
-    tiny: function() {
-      return Tool.randRange(5, 8);
-    },
-
-    small: function() {
-      return Tool.randRange(10, 15);
-    },
-
-    medium: function() {
-      return Tool.randRange(20, 30);
-    },
-
-    large: function() {
-      return Tool.randRange(35, 52);
-    },
-
-    veryLarge: function() {
-      return Tool.randRange(55, 82);
-    },
-
-    huge: function() {
-      return Tool.randRange(85, 127);
-    }
+  params: {
+    sizeFactor: 5,
+    roomPaddings: 1,
+    corridorsVsRooms: [20, 80],
   },
-  roomPaddings: 1
+  blueprints: function(size) {
+    var blueprints = [];
+    var roomCount;
+    var roomChance;
+
+    switch(size) {
+      case 'tiny':
+        roomCount = Tool.randRange(5, 8);
+        roomChance = [75, 25, 0, 0];
+        break;
+
+      case 'small':
+        roomCount = Tool.randRange(10, 15);
+        roomChance = [65, 25, 10, 0];
+        break;
+
+      case 'medium':
+        roomCount = Tool.randRange(20, 30);
+        roomChance = [45, 25, 20, 10];
+        break;
+
+      case 'large':
+        roomCount = Tool.randRange(35, 52);
+        roomChance = [30, 30, 25, 15];
+        break;
+
+      case 'huge':
+        roomCount = Tool.randRange(55, 82);
+        roomChance = [15, 35, 30, 20];
+        break;
+
+      case 'colossal':
+        roomCount = Tool.randRange(85, 127);
+        roomChance = [15, 35, 30, 20];
+        break;
+
+      default:
+        roomCount = Tool.randRange(5, 8);
+        roomChance = [75, 25, 0, 0];
+        break;
+    }
+
+    for(roomCount; roomCount > 0; roomCount--) {
+      blueprints.push(Tool.weightedRandAttr(['small', 'medium', 'large', 'huge'], roomChance));
+    }
+
+    return blueprints;
+  },
+  matrix: function(ship, shipClass, faction) {
+    var roomCount = ship.blueprints.length;
+    var boundaries = new Boundaries(
+      roomCount * Ship.gen.params.sizeFactor,
+      roomCount * Ship.gen.params.sizeFactor,
+      21
+    );
+
+    var matrix = new Matrix(boundaries, Ship.gen.params.roomPaddings);
+    matrix.flatten(); //change to enable 3D placement
+    
+    return matrix;
+  }
 };
 
-Ship.genMatrix = function(ship, shipClass, faction) {
-  var boundaries = new Boundaries(
-    ship.roomCount * Ship.gen.sizeFactor,
-    ship.roomCount * Ship.gen.sizeFactor,
-    21
-  );
-
-  var matrix = new Matrix(boundaries, Ship.gen.roomPaddings);
-  matrix.flatten(); //change to enable 3D placement
-  matrix.fill(function() {
-    return new Cell();
-  });
-
-  return matrix;
-};
-
-Ship.prototype.place = function(room, point) {
-  var ship = this;
-  var srcMatrix = room.matrix;
-  var destMatrix = ship.matrix;
-
-  srcMatrix.transferTo(destMatrix, point);
-  // console.log('placed at ' + point.x + ' ' + point.y + ' ' + point.z);
-};
-
-Ship.prototype.pushRoom = function(room, point) {
-  var ship = this;
-
-  var log = {
-    room: room,
-    at: point
-  };
-
-  ship.rooms.push(log);
-  ship.place(room, point);
-};
-
-Ship.populate = function(ship) {
+Ship.prototype.build = function() {
   var simmetry = 'noSimmetry'; //make dynamic and relative to faction
   var placement = 'clustered'; //make dynamic and relative to faction
 
-  ship.addBuilder('Tunneler');
-  // ship.matrix.addBuilder(new Tunneler(ship.matrix));
-  // ship.matrix.addBuilder(new Tunneler(ship.matrix));
-  ship.build();
+  this.builderManager.addTunneler();
+  this.builderManager.build();
 
   // new Tunneler(ship.matrix);
   // new Tunneler(ship.matrix);
@@ -109,22 +111,7 @@ Ship.populate = function(ship) {
   //   // ShipGen.getRule('roomPlacement.patterns', 'cluster')(ship, rC);
   // }
   
-  ship.matrix.flatten();
+  this.matrix.flatten();
 
   //matrix.trim(); fix trim
-};
-
-Ship.prototype.addBuilder = function(type) {
-  switch(type) {
-    case 'Tunneler':
-    this.matrix.builderManager.addTunneler();  
-  }
-};
-
-Ship.prototype.rmBuilder = function(builder) {
-  this.matrix.builderManager.rmBuilder(builder);
-};
-
-Ship.prototype.build = function() {
-  this.matrix.builderManager.build();
 };
