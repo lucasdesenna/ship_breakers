@@ -11,6 +11,7 @@ Roomer.prototype = Object.create(Builder.prototype);
 Roomer.prototype.constructor = Roomer;
 
 Roomer.prototype.work = function() {
+  // this.tgtMatrix.val(this.pos, new RoomCell());
   if(this.manager.ship.blueprints.length > 0) {
     this.room = Roomer.genRoom(this);
 
@@ -49,19 +50,20 @@ Roomer.prototype.roomPlacementPos = function() {
   var room = this.room;
   var _pos = this.pos.toTopLeft(room.matrix);
   var direction = this.direction;
-  var primaryAxis = this.primaryAxis;
+  var pAxis = this.primaryAxis;
 
-  _pos = _pos[direction](room.matrix.center[primaryAxis] + 1);
+  _pos = _pos[direction](room.matrix.center[pAxis] + 1);
 
   return _pos;
 };
 
 Roomer.prototype.buildEntrance = function(pos) {
-  var secondaryAxis = this.secondaryAxis;
-  var sAxisLength = this.room.matrix.boundaries[secondaryAxis];
+  var sAxis = this.secondaryAxis;
+  var sAxisLength = this.room.matrix.boundaries[sAxis];
   var maxEntrances = (sAxisLength  - 1) / 2;
   var entranceCount = Tool.randRange(1, maxEntrances);
-  var entrancePos = pos.neighborsInAxis(secondaryAxis, maxEntrances);
+
+  var entrancePos = this.entrancePlacementPos(pos);
 
   while(entranceCount > 0 && entrancePos.length > 0) {
     var selectedPos = Tool.randAttr(entrancePos);
@@ -74,16 +76,37 @@ Roomer.prototype.buildEntrance = function(pos) {
     var _index = index;
     var exclude = 1;
 
-    if(typeof selectedPos[index - 1] !== 'undefined') {
+    if(typeof entrancePos[index - 1] !== 'undefined') {
       _index--;
       exclude++;
     }
 
-    if(typeof selectedPos[index + 1] !== 'undefined') {
+    if(typeof entrancePos[index + 1] !== 'undefined') {
       exclude++;
     }
     
     entrancePos.splice(_index, exclude);
     entranceCount--;
   }
+};
+
+Roomer.prototype.entrancePlacementPos = function(pos) {
+  var tgtMatrix = this.tgtMatrix;
+  var reverseDir = this.reverseDirection();
+  var secondaryAxis = this.secondaryAxis;
+  var sAxisLength = this.room.matrix.boundaries[secondaryAxis];
+  var radius = Math.floor(sAxisLength / 2);
+
+  var entrancePos = pos.inAxis(secondaryAxis, radius);
+
+  var cell;
+  for(var e = entrancePos.length - 1; e >= 0; e--) {
+    cell = tgtMatrix.val(entrancePos[e][reverseDir]());
+
+    if(cell.type !== 'corridor') {
+      entrancePos.splice(e, 1);
+    }
+  }
+
+  return entrancePos;
 };

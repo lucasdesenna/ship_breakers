@@ -7,7 +7,8 @@ function BuilderManager(ship) {
   this.generation = 0;
   this.builders = {
     current: [],
-    stash: []
+    stash: [],
+    finals: [[]]
   };  
 }
 
@@ -20,25 +21,60 @@ BuilderManager.prototype.addBuilder = function(type, options) {
   } else {
     builders.stash.push(builder);
   }
+  
+  this.buildersCount++;
+};
+
+BuilderManager.prototype.addFinal = function(type, options) {
+  var finals = this.builders.finals;
+
+  var _final = new window[type](this, options);
+  
+  finals[finals.length - 1].push(_final);
 
   this.buildersCount++;
 };
 
 BuilderManager.prototype.recycle = function() {
-  var builders = this.builders;
+  var current = this.builders.current;
+  var stash = this.builders.stash;
 
-  for(var b = builders.current.length - 1; b >= 0; b--) {
-    if(builders.current[b].alive === false) {
-      builders.current.splice(b, 1);
+  for(var b = current.length - 1; b >= 0; b--) {
+    if(current[b].alive === false) {
+      current.splice(b, 1);
     }
   }
 
-  if(builders.current.length === 0) {
-    builders.current = builders.stash;
-    builders.stash = [];
-    this.generation++;
+  if(current.length === 0 && stash.length > 0) {
+    this.builders.current = stash;
+    this.builders.stash = [];
+
+    this.builders.finals.push([]);
+    
     console.log('end of generation');
+    this.generation++;
   }
+
+
+};
+
+BuilderManager.prototype.recycleFinals = function() {
+  var finals = this.builders.finals;
+  var currentFinals = finals[finals.length - 1];
+
+  for(var cF = currentFinals.length - 1; cF >= 0; cF--) {
+    if(currentFinals[cF].alive === false) {
+      currentFinals.splice(cF, 1);
+    }
+  }
+
+  finals[finals.length - 1] = currentFinals;
+
+  if(currentFinals.length === 0) {
+    finals.splice(finals.length - 1, 1);
+  }
+
+  this.builders.finals = finals;
 };
 
 BuilderManager.prototype.build = function() {
@@ -55,7 +91,7 @@ BuilderManager.prototype.build = function() {
   var i = setInterval(function() {
     var builders = self.builders;
 
-    if(builders.current.length > 0 && self.ship.blueprints.length > 0) {
+    if(builders.current.length > 0) {
       for(var b in builders.current) {
         builders.current[b].work();
       }
@@ -63,9 +99,29 @@ BuilderManager.prototype.build = function() {
     } else {
       clearInterval(i);
       console.log('stopped building');
+      self.finalize();
     }
   }, 100);
   console.log('started building');
+};
+
+BuilderManager.prototype.finalize = function() {
+  var self = this;
+  var i = setInterval(function() {
+    var finals = self.builders.finals;
+
+    if(finals.length > 0) {
+      var currentFinals = finals[finals.length - 1];
+      for(var f in currentFinals) {
+        currentFinals[f].work();
+      }
+      self.recycleFinals();
+    } else {
+      clearInterval(i);
+      console.log('stopped finalizing');
+    }
+  }, 100);
+  console.log('started finalizing');
 };
 
 BuilderManager.prototype.addTunneler = function(options) {
@@ -80,6 +136,10 @@ BuilderManager.prototype.addRoomer = function(options) {
   options.paddings = typeof options.paddings !== 'undefined' ? options.paddings : this.tgtMatrix.paddings;
 
   this.addBuilder('Roomer', options);
+};
+
+BuilderManager.prototype.addCleaner = function(options) {
+  this.addFinal('Cleaner', options);
 };
 
 BuilderManager.prototype.placeRoom = function(room, point) {

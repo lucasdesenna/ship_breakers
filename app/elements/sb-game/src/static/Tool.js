@@ -12,6 +12,30 @@ Tool.clone = function(object) {
   return clone;
 };
 
+Tool.dirToAxis = function(direction) {
+  var axis;
+
+  if(direction === 'up' || direction === 'down') {
+    axis = 'y';
+  } else if(direction === 'right' || direction === 'left') {
+    axis = 'x';
+  }
+
+  return axis;
+}
+
+Tool.perpendicularAxis = function(axis) {
+  var pAxis;
+
+  if(axis === 'x') {
+    pAxis = 'y';
+  } else if(axis === 'y') {
+    pAxis = 'x';
+  }
+
+  return pAxis;
+};
+
 Tool.randRange = function(min, max) {
   return Math.round(Math.random() * (max - min) + min);
 };

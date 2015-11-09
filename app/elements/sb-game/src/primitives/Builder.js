@@ -8,7 +8,6 @@ function Builder(manager, job, jobCondition, options) {
   options.type = typeof options.type !== 'undefined' ? options.type : Builder.defaults.type;
   options.paddings = typeof options.paddings !== 'undefined' ? options.paddings : Builder.defaults.paddings;
   options.life = typeof options.life !== 'undefined' ? options.life : Builder.defaults.life(manager.tgtMatrix);
-  options.speed = typeof options.speed !== 'undefined' ? options.speed : Builder.defaults.speed;
   options.width = typeof options.width !== 'undefined' ? options.width : Builder.defaults.width;
   options.dodgy = typeof options.dodgy !== 'undefined' ? options.dodgy : Builder.defaults.dodgy;
   options.chanceToTurn = typeof options.chanceToTurn !== 'undefined' ? options.chanceToTurn : Builder.defaults.chanceToTurn;
@@ -17,8 +16,6 @@ function Builder(manager, job, jobCondition, options) {
   this.manager = manager;
   this.id = manager.buildersCount;
   this.tgtMatrix = manager.tgtMatrix;
-  this.job = job;
-  this.jobCondition = jobCondition;
   this.alive = true;
   this.options = options;
   
@@ -30,7 +27,10 @@ function Builder(manager, job, jobCondition, options) {
 
   this.primaryAxis = '';
   this.secondaryAxis = '';
-  this.setAxis();
+  this.updateAxes();
+
+  this.job = job;
+  this.jobCondition = jobCondition;
 }
 
 Builder.defaults = {
@@ -44,7 +44,7 @@ Builder.defaults = {
     return tgtMatrix.randPos([paddings, tgtMatrix.boundaries.x - paddings - 1], [paddings, tgtMatrix.boundaries.y - paddings - 1], [0, 0]);
   },
   startingDir: function(builder) {
-    return Tool.randAttr(builder.possibleDirections());
+    return Tool.randAttr(['up', 'right', 'down', 'left']);
   },
   life: function(tgtMatrix) {
     var boundaries = tgtMatrix.boundaries;
@@ -52,7 +52,6 @@ Builder.defaults = {
 
     return Tool.randRange(avrgDimension * 0.2, avrgDimension * 0.4);
   },
-  speed: 2,
   width: 1,
   dodgy: false,
   paddings: 1,
@@ -60,33 +59,30 @@ Builder.defaults = {
   chanceToSpawn: 70,
 };
 
-Builder.prototype.setAxis = function() {
-  var primaryAxis;
-  var secondaryAxis;
+Builder.prototype.updateAxes = function() {
+  var pAxis = Tool.dirToAxis(this.direction);
+  var sAxis = Tool.perpendicularAxis(pAxis);
 
-  if(this.direction === 'up' || this.direction === 'down') {
-    primaryAxis = 'y';
-    secondaryAxis = 'x';
-  } else {
-    primaryAxis = 'x';
-    secondaryAxis = 'y';
-  }
-
-  this.primaryAxis = primaryAxis;
-  this.secondaryAxis = secondaryAxis;
+  this.primaryAxis = pAxis;
+  this.secondaryAxis = sAxis;
 };
 
 Builder.prototype.work = function() {
-  this.moveOrTurn();
-  
-  if(this.possibleDirections(this.pos, true).length > 0) {
+  if(this.checkPos()) {
+    this.job(this);
+
     var builder = this;
+    
     this.mayDo(this.options.chanceToSpawn, function() {
       builder.spawn();
     });
-  }
 
-  this.age();
+    this.moveOrTurn();
+
+    this.age();
+  } else {
+    this.die();
+  }
 };
 
 Builder.prototype.age = function() {
@@ -119,7 +115,7 @@ Builder.prototype.possibleDirections = function(pos, excludeCurrentAndReverse) {
     newPos = pos[direction]();
 
     if(
-      this.checkPos(newPos) && 
+      this.tgtMatrix.contains(newPos) && 
       (!excludeCurrentAndReverse ||
         (excludeCurrentAndReverse && 
           direction !== this.reverseDirection() && 
@@ -135,45 +131,48 @@ Builder.prototype.possibleDirections = function(pos, excludeCurrentAndReverse) {
 
 Builder.prototype.moveOrTurn = function() {
   var self = this;
-  var validMove = this.checkMove();
-  var validTurn = this.checkTurn();
-
-  var move = function(builder, validMove) {
-    for(var m in validMove) {
-      builder.pos = validMove[m];
-      builder.job(builder);
-    }
-  };
-
-  var turn = function(builder, validTurn) {
-    builder.direction = validTurn.direction;
-    builder.setAxis();
-
-    for(var t in validTurn.path) {
-      builder.pos = validTurn.path[t];
-      builder.job(builder);
-    }
-  };
+  var validMove = this.validMove();
+  var validDirections = this.validDirections();
 
   if(this.alive) {
-    if(validMove !== false && validTurn !== false) {
+    if(validMove !== false && validDirections !== false) {
       this.mayDo(this.options.chanceToTurn, function() {
-        turn(self, validTurn);
+        self.turn(validDirections);
       }, function() {
-        move(self, validMove);
+        self.move(validMove);
       });
     } else if(this.options.dodgy) {
       if(validMove !== false) {
-        move(self, validMove);
-      } else if(validTurn !== false) {
-        turn(self, validTurn);
+        this.move(validMove);
+      } else if(validDirections !== false) {
+        this.turn(validDirections);
       } else {
         this.die();
       }
+    } else if(validMove !== false) {
+        this.move(validMove);
     } else {
       this.die();
     }
   }
+};
+
+Builder.prototype.move = function(validMove) {
+  // console.log('moved');
+
+  this.pos = validMove;
+};
+
+Builder.prototype.turn = function(validDirections) {
+  // console.log('turned');
+
+  var newDirection = Tool.randAttr(validDirections);
+  this.direction = newDirection;
+  this.updateAxes();
+
+  this.pos = this.pos[newDirection]();
+  this.job(this);
+  this.pos = this.pos[newDirection]();
 };
 
 Builder.prototype.reverseDirection = function(direction) {
@@ -197,7 +196,7 @@ Builder.prototype.spawn = function(type, options) {
 
   if(this.alive) {
     this.manager.addBuilder(type, options);
-    console.log('spawned');
+    // console.log('spawned');
   }
 };
 
@@ -209,75 +208,59 @@ Builder.prototype.mayDo = function(chanceToDo, task, otherwise) {
   }
 };
 
-Builder.prototype.checkMove = function(pos, direction, speed) {
+Builder.prototype.validMove = function(pos, direction) {
   pos = typeof pos !== 'undefined' ? pos : this.pos;
   direction = typeof direction !== 'undefined' ? direction : this.direction;
-  speed = typeof speed !== 'undefined' ? speed: this.options.speed;
+  var width = this.options.width;
 
-  var _pos = pos;
-  var _direction = direction;
-  var _speed = speed;
-  var path = [_pos];
+  var distance = Math.ceil(width / 2);
+  var newPos = pos[direction](distance);
 
-  for(_speed; _speed > 0; _speed--) {
-    _pos = _pos[_direction]();
-
-    if(this.checkPos(_pos)) {
-        path.push(_pos);
-    } else {
-      return false;
-    }
-  }
-
-  return path;
-};
-
-Builder.prototype.checkTurn = function(pos) {
-  pos = typeof pos !== 'undefined' ? pos : this.pos;
-
-  var _pos = pos;
-  var pos0 = _pos;
-  var pDirections = this.possibleDirections(_pos, true);
-  var direction;
-  var pathes = [];
-  var path;
-
-  for(var pD in pDirections) {
-    _pos = pos0;
-    direction = pDirections[pD];
-
-    path = this.checkMove(_pos, direction, this.options.width + this.options.paddings);
-
-    if(path !== false) {
-      pathes.push({direction: direction, path: path});
-    }
-  }
-
-  if(pathes.length > 0) {
-    return Tool.randAttr(pathes);
+  if(
+    this.checkPos(newPos, direction)
+  ) {
+    return newPos;
   } else {
     return false;
   }
 };
 
-Builder.prototype.checkPos = function(pos) {
+Builder.prototype.validDirections = function(pos) {
   pos = typeof pos !== 'undefined' ? pos : this.pos;
 
-  if(
-    this.tgtMatrix.contains(pos, true)
-  ) {
-    if(this.jobCondition(this, pos)) {
-      var neighbors = pos.neighbors(this.options.paddings);
+  var newPos = pos;
+  var pos0 = newPos;
+  var pDirections = this.possibleDirections(pos0, true);
+  var direction;
+  var vDirections = [];
 
-      for(var n in neighbors) {
-        if(
-          this.tgtMatrix.contains(neighbors[n]) &&
-          this.jobCondition(this, neighbors[n])
-        ) {
-          return true;
-        }
-      }
+  for(var pD in pDirections) {
+    direction = pDirections[pD];
+
+    if(
+      this.validMove(pos0[direction](), direction) !== false &&
+      this.validMove(pos0[direction](2), direction) !== false
+    ) {
+      vDirections.push(direction);
     }
+  }
+
+  if(vDirections.length > 0) {
+    return vDirections;
+  } else {
+    return false;
+  }
+};
+
+Builder.prototype.checkPos = function(pos, direction) {
+  pos = typeof pos !== 'undefined' ? pos : this.pos;
+  direction = typeof direction !== 'undefined' ? direction : this.direction;
+
+  if(
+    this.tgtMatrix.contains(pos, true) &&
+    this.jobCondition(this, pos, direction)
+  ) {
+    return true;
   }
 
   return false;

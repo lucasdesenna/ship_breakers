@@ -88,6 +88,7 @@ Point.prototype.left = function(steps) {
 Point.prototype.neighbors = function(radius, flat) {
   radius = typeof radius !== 'undefined' ? radius: 1;
   flat = typeof flat !== 'undefined' ? flat : true;
+  excludeSelf = typeof excludeSelf !== 'undefined' ? excludeSelf: false;
 
   var neighbors = [];
   
@@ -110,6 +111,28 @@ Point.prototype.neighbors = function(radius, flat) {
   return neighbors;
 };
 
+
+Point.prototype.inAxis = function(axis, radius) {
+  radius = typeof radius !== 'undefined' ? radius: 1;
+
+  var inAxis = [];
+
+  for(var i = this[axis] - radius; i <= this[axis] + radius; i++) {
+    var n; 
+    if(axis === 'x') {
+      n = new Point(i, this.y, this.z);
+    } else if(axis === 'y') {
+      n = new Point(this.x, i, this.z);
+    } else if(axis === 'z') {
+      n = new Point(this.x, this.y, i);
+    }
+
+    inAxis.push(n);
+  }
+
+  return inAxis;
+};
+
 Point.prototype.neighborsInAxis = function(axis, radius) {
   radius = typeof radius !== 'undefined' ? radius: 1;
 
@@ -125,8 +148,25 @@ Point.prototype.neighborsInAxis = function(axis, radius) {
       n = new Point(this.x, this.y, i);
     }
 
-    neighbors.push(n);
+    if(
+      !(n.x === this.x &&
+      n.y === this.y &&
+      n.z === this.z)
+    ) {
+      neighbors.push(n);
+    }
   }
+
+  return neighbors;
+};
+
+Point.prototype.neighborsBothAxes = function(radius) {
+  radius = typeof radius !== 'undefined' ? radius: 1;
+
+  var neighborsX = this.neighborsInAxis('x', radius);
+  var neighborsY = this.neighborsInAxis('y', radius);
+
+  var neighbors = neighborsX.concat(neighborsY);
 
   return neighbors;
 };

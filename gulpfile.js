@@ -121,12 +121,9 @@ gulp.task('game', function () {
       'app/elements/sb-game/src/primitives/Matrix.js',
       'app/elements/sb-game/src/primitives/Room.js',
       'app/elements/sb-game/src/primitives/Builder.js',
+      'app/elements/sb-game/src/builders/*.js',
       'app/elements/sb-game/src/primitives/BuilderManager.js',
-      'app/elements/sb-game/src/classes/Tunneler.js',
-      'app/elements/sb-game/src/classes/Waller.js',
-      'app/elements/sb-game/src/classes/Roomer.js',
-      'app/elements/sb-game/src/classes/Module.js',
-      'app/elements/sb-game/src/classes/Ship.js',
+      'app/elements/sb-game/src/super_classes/*.js',
       'app/elements/sb-game/src/Main.js', 
       'app/elements/sb-game/src/debug.js'
     ])

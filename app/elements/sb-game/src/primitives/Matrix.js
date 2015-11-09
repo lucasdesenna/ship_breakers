@@ -152,9 +152,6 @@ Matrix.prototype.checkPlacement = function(srcMatrix, pos) {
                 _srcMatrix.body[x][y][z].type !== 'void' &&
                 _srcMatrix.body[x][y][z].id !== tgtMatrix.body[_x][_y][_z].id
               ) {
-                if(_srcMatrix.body[x][y][z].type === tgtMatrix.body[_x][_y][_z].type) {
-                  console.log(tgtMatrix.body[_x][_y][_z].type);
-                }
                 return false;
               }
             }

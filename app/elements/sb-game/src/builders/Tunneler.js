@@ -3,9 +3,13 @@ function Tunneler(manager, options) {
 
   options = typeof options !== 'undefined' ? options : {};
   options.type = 'Tunneler';
-  options.width = typeof options.width !== 'undefined' ? options.width : Tunneler.defaults.width();
-
+  // options.width = typeof options.width !== 'undefined' ? options.width : Tunneler.defaults.width();
+  options.width = typeof options.width !== 'undefined' ? options.width : 1;
+  
   Builder.call(this, manager, Tunneler.job, Tunneler.jobCondition, options);
+
+  this.history = [];
+  this.corridor = Tunneler.genCorridor(this);
 }
 
 Tunneler.defaults = {
@@ -19,17 +23,10 @@ Tunneler.prototype.constructor = Tunneler;
 
 Tunneler.genCorridor = function(tunneler) {
   var id = tunneler.id;
-  var sA = tunneler.secondaryAxis;
   var width = tunneler.options.width;
-  var boundaries;
-
-  if(sA === 'x') {
-    boundaries = new Boundaries(width, 1, 1);
-  } else if(sA === 'y') {
-    boundaries = new Boundaries(1, width, 1);
-  }
-
+  var boundaries = new Boundaries(width, width, 1);
   var corridor = new Matrix(boundaries);
+
   corridor.fill(function() {
     return new Corridor(id);
   });
@@ -38,7 +35,7 @@ Tunneler.genCorridor = function(tunneler) {
 };
 
 Tunneler.prototype.spawn = function() {
-  if(this.alive) {
+  if(this.alive && this.manager.ship.blueprints.length > 0) {
     var pDirections = this.possibleDirections(this.pos, true);
     var direction;
     var types = ['Tunneler', 'Roomer']; 
@@ -61,7 +58,7 @@ Tunneler.prototype.spawn = function() {
           break;
       }
 
-      console.log('spawned');
+      // console.log('spawned');
     }
   }
 };
@@ -72,19 +69,36 @@ Tunneler.job = function(tunneler) {
   var pos = tunneler.pos.toTopLeft(corridor);
   var tgtMatrix = tunneler.tgtMatrix;
 
+  tunneler.history.push(pos);
   corridor.transferTo(tgtMatrix, pos);
 };
 
-Tunneler.jobCondition = function(tunneler, pos) {
-  if(tunneler.direction) {
-    tunneler.corridor = Tunneler.genCorridor(tunneler);
-    var tgtMatrix = tunneler.tgtMatrix;
-    var direction = tunneler.direction;
+Tunneler.jobCondition = function(tunneler, pos, direction) {
+  var tgtMatrix = tunneler.tgtMatrix;
+  var width = Math.ceil(tunneler.options.width / 2);
+  
+  var sAxis = Tool.perpendicularAxis(Tool.dirToAxis(direction));
+  var poses = pos.neighborsInAxis(sAxis, width);
+  
+  var cell;
+  for(var p in poses) {
+    cell = tgtMatrix.val(poses[p]);
 
-    var _pos = pos[direction]();
-
-    return tgtMatrix.checkPlacement(tunneler.corridor, _pos);
-  } else {
-    return true;
+    if(cell.type !== 'void') {
+      return false;
+    }
   }
+
+  cell = tgtMatrix.val(pos[direction]());
+
+  if(cell.type !== 'void' && cell.type !== 'corridor') {
+    return false;
+  }
+
+  return true;
+};
+
+Tunneler.prototype.die = function() {
+  this.alive = false;
+  this.manager.addCleaner({startingPos: this.pos, startingDir: this.options.startingDir, width: this.options.width, tgtId: this.id, tgtList: this.history});
 };

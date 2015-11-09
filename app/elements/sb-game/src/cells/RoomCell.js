@@ -18,9 +18,9 @@ RoomCell.prototype.clone = function() {
     itens: this.itens,
     furniture: this.furniture,
     characters: this.characters
-  }
+  };
 
   var clone = new RoomCell(this.id, entities);
 
   return clone;
-}
+};

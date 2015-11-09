@@ -29,9 +29,9 @@ Cell.prototype.clone = function() {
     itens: this.itens,
     furniture: this.furniture,
     characters: this.characters
-  }
+  };
 
   var clone = new Cell(this.id, this.type, entities);
 
   return clone;
-}
+};

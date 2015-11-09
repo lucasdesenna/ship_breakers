@@ -18,9 +18,9 @@ Corridor.prototype.clone = function() {
     itens: this.itens,
     furniture: this.furniture,
     characters: this.characters
-  }
+  };
 
   var clone = new Corridor(this.id, entities);
 
   return clone;
-}
+};
