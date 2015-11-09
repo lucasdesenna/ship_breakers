@@ -12,6 +12,30 @@ Tool.clone = function(object) {
   return clone;
 };
 
+Tool.dirToAxis = function(direction) {
+  var axis;
+
+  if(direction === 'up' || direction === 'down') {
+    axis = 'y';
+  } else if(direction === 'right' || direction === 'left') {
+    axis = 'x';
+  }
+
+  return axis;
+}
+
+Tool.perpendicularAxis = function(axis) {
+  var pAxis;
+
+  if(axis === 'x') {
+    pAxis = 'y';
+  } else if(axis === 'y') {
+    pAxis = 'x';
+  }
+
+  return pAxis;
+};
+
 Tool.randRange = function(min, max) {
   return Math.round(Math.random() * (max - min) + min);
 };
@@ -213,6 +237,7 @@ Point.prototype.left = function(steps) {
 Point.prototype.neighbors = function(radius, flat) {
   radius = typeof radius !== 'undefined' ? radius: 1;
   flat = typeof flat !== 'undefined' ? flat : true;
+  excludeSelf = typeof excludeSelf !== 'undefined' ? excludeSelf: false;
 
   var neighbors = [];
   
@@ -235,6 +260,28 @@ Point.prototype.neighbors = function(radius, flat) {
   return neighbors;
 };
 
+
+Point.prototype.inAxis = function(axis, radius) {
+  radius = typeof radius !== 'undefined' ? radius: 1;
+
+  var inAxis = [];
+
+  for(var i = this[axis] - radius; i <= this[axis] + radius; i++) {
+    var n; 
+    if(axis === 'x') {
+      n = new Point(i, this.y, this.z);
+    } else if(axis === 'y') {
+      n = new Point(this.x, i, this.z);
+    } else if(axis === 'z') {
+      n = new Point(this.x, this.y, i);
+    }
+
+    inAxis.push(n);
+  }
+
+  return inAxis;
+};
+
 Point.prototype.neighborsInAxis = function(axis, radius) {
   radius = typeof radius !== 'undefined' ? radius: 1;
 
@@ -250,8 +297,25 @@ Point.prototype.neighborsInAxis = function(axis, radius) {
       n = new Point(this.x, this.y, i);
     }
 
-    neighbors.push(n);
+    if(
+      !(n.x === this.x &&
+      n.y === this.y &&
+      n.z === this.z)
+    ) {
+      neighbors.push(n);
+    }
   }
+
+  return neighbors;
+};
+
+Point.prototype.neighborsBothAxes = function(radius) {
+  radius = typeof radius !== 'undefined' ? radius: 1;
+
+  var neighborsX = this.neighborsInAxis('x', radius);
+  var neighborsY = this.neighborsInAxis('y', radius);
+
+  var neighbors = neighborsX.concat(neighborsY);
 
   return neighbors;
 };
@@ -344,12 +408,12 @@ Cell.prototype.clone = function() {
     itens: this.itens,
     furniture: this.furniture,
     characters: this.characters
-  }
+  };
 
   var clone = new Cell(this.id, this.type, entities);
 
   return clone;
-}
+};
 
 function Corridor(id, entities) {
   'use strict';
@@ -371,12 +435,13 @@ Corridor.prototype.clone = function() {
     itens: this.itens,
     furniture: this.furniture,
     characters: this.characters
-  }
+  };
 
   var clone = new Corridor(this.id, entities);
 
   return clone;
-}
+};
+
 function RoomCell(id, entities) {
   'use strict';
 
@@ -397,12 +462,13 @@ RoomCell.prototype.clone = function() {
     itens: this.itens,
     furniture: this.furniture,
     characters: this.characters
-  }
+  };
 
   var clone = new RoomCell(this.id, entities);
 
   return clone;
-}
+};
+
 function Matrix(boundaries, paddings) {
   'use strict';
   
@@ -557,9 +623,6 @@ Matrix.prototype.checkPlacement = function(srcMatrix, pos) {
                 _srcMatrix.body[x][y][z].type !== 'void' &&
                 _srcMatrix.body[x][y][z].id !== tgtMatrix.body[_x][_y][_z].id
               ) {
-                if(_srcMatrix.body[x][y][z].type === tgtMatrix.body[_x][_y][_z].type) {
-                  console.log(tgtMatrix.body[_x][_y][_z].type);
-                }
                 return false;
               }
             }
@@ -893,7 +956,6 @@ function Builder(manager, job, jobCondition, options) {
   options.type = typeof options.type !== 'undefined' ? options.type : Builder.defaults.type;
   options.paddings = typeof options.paddings !== 'undefined' ? options.paddings : Builder.defaults.paddings;
   options.life = typeof options.life !== 'undefined' ? options.life : Builder.defaults.life(manager.tgtMatrix);
-  options.speed = typeof options.speed !== 'undefined' ? options.speed : Builder.defaults.speed;
   options.width = typeof options.width !== 'undefined' ? options.width : Builder.defaults.width;
   options.dodgy = typeof options.dodgy !== 'undefined' ? options.dodgy : Builder.defaults.dodgy;
   options.chanceToTurn = typeof options.chanceToTurn !== 'undefined' ? options.chanceToTurn : Builder.defaults.chanceToTurn;
@@ -902,8 +964,6 @@ function Builder(manager, job, jobCondition, options) {
   this.manager = manager;
   this.id = manager.buildersCount;
   this.tgtMatrix = manager.tgtMatrix;
-  this.job = job;
-  this.jobCondition = jobCondition;
   this.alive = true;
   this.options = options;
   
@@ -915,7 +975,10 @@ function Builder(manager, job, jobCondition, options) {
 
   this.primaryAxis = '';
   this.secondaryAxis = '';
-  this.setAxis();
+  this.updateAxes();
+
+  this.job = job;
+  this.jobCondition = jobCondition;
 }
 
 Builder.defaults = {
@@ -929,7 +992,7 @@ Builder.defaults = {
     return tgtMatrix.randPos([paddings, tgtMatrix.boundaries.x - paddings - 1], [paddings, tgtMatrix.boundaries.y - paddings - 1], [0, 0]);
   },
   startingDir: function(builder) {
-    return Tool.randAttr(builder.possibleDirections());
+    return Tool.randAttr(['up', 'right', 'down', 'left']);
   },
   life: function(tgtMatrix) {
     var boundaries = tgtMatrix.boundaries;
@@ -937,7 +1000,6 @@ Builder.defaults = {
 
     return Tool.randRange(avrgDimension * 0.2, avrgDimension * 0.4);
   },
-  speed: 2,
   width: 1,
   dodgy: false,
   paddings: 1,
@@ -945,33 +1007,30 @@ Builder.defaults = {
   chanceToSpawn: 70,
 };
 
-Builder.prototype.setAxis = function() {
-  var primaryAxis;
-  var secondaryAxis;
+Builder.prototype.updateAxes = function() {
+  var pAxis = Tool.dirToAxis(this.direction);
+  var sAxis = Tool.perpendicularAxis(pAxis);
 
-  if(this.direction === 'up' || this.direction === 'down') {
-    primaryAxis = 'y';
-    secondaryAxis = 'x';
-  } else {
-    primaryAxis = 'x';
-    secondaryAxis = 'y';
-  }
-
-  this.primaryAxis = primaryAxis;
-  this.secondaryAxis = secondaryAxis;
+  this.primaryAxis = pAxis;
+  this.secondaryAxis = sAxis;
 };
 
 Builder.prototype.work = function() {
-  this.moveOrTurn();
-  
-  if(this.possibleDirections(this.pos, true).length > 0) {
+  if(this.checkPos()) {
+    this.job(this);
+
     var builder = this;
+    
     this.mayDo(this.options.chanceToSpawn, function() {
       builder.spawn();
     });
-  }
 
-  this.age();
+    this.moveOrTurn();
+
+    this.age();
+  } else {
+    this.die();
+  }
 };
 
 Builder.prototype.age = function() {
@@ -1004,7 +1063,7 @@ Builder.prototype.possibleDirections = function(pos, excludeCurrentAndReverse) {
     newPos = pos[direction]();
 
     if(
-      this.checkPos(newPos) && 
+      this.tgtMatrix.contains(newPos) && 
       (!excludeCurrentAndReverse ||
         (excludeCurrentAndReverse && 
           direction !== this.reverseDirection() && 
@@ -1020,45 +1079,48 @@ Builder.prototype.possibleDirections = function(pos, excludeCurrentAndReverse) {
 
 Builder.prototype.moveOrTurn = function() {
   var self = this;
-  var validMove = this.checkMove();
-  var validTurn = this.checkTurn();
-
-  var move = function(builder, validMove) {
-    for(var m in validMove) {
-      builder.pos = validMove[m];
-      builder.job(builder);
-    }
-  };
-
-  var turn = function(builder, validTurn) {
-    builder.direction = validTurn.direction;
-    builder.setAxis();
-
-    for(var t in validTurn.path) {
-      builder.pos = validTurn.path[t];
-      builder.job(builder);
-    }
-  };
+  var validMove = this.validMove();
+  var validDirections = this.validDirections();
 
   if(this.alive) {
-    if(validMove !== false && validTurn !== false) {
+    if(validMove !== false && validDirections !== false) {
       this.mayDo(this.options.chanceToTurn, function() {
-        turn(self, validTurn);
+        self.turn(validDirections);
       }, function() {
-        move(self, validMove);
+        self.move(validMove);
       });
     } else if(this.options.dodgy) {
       if(validMove !== false) {
-        move(self, validMove);
-      } else if(validTurn !== false) {
-        turn(self, validTurn);
+        this.move(validMove);
+      } else if(validDirections !== false) {
+        this.turn(validDirections);
       } else {
         this.die();
       }
+    } else if(validMove !== false) {
+        this.move(validMove);
     } else {
       this.die();
     }
   }
+};
+
+Builder.prototype.move = function(validMove) {
+  // console.log('moved');
+
+  this.pos = validMove;
+};
+
+Builder.prototype.turn = function(validDirections) {
+  // console.log('turned');
+
+  var newDirection = Tool.randAttr(validDirections);
+  this.direction = newDirection;
+  this.updateAxes();
+
+  this.pos = this.pos[newDirection]();
+  this.job(this);
+  this.pos = this.pos[newDirection]();
 };
 
 Builder.prototype.reverseDirection = function(direction) {
@@ -1082,7 +1144,7 @@ Builder.prototype.spawn = function(type, options) {
 
   if(this.alive) {
     this.manager.addBuilder(type, options);
-    console.log('spawned');
+    // console.log('spawned');
   }
 };
 
@@ -1094,279 +1156,242 @@ Builder.prototype.mayDo = function(chanceToDo, task, otherwise) {
   }
 };
 
-Builder.prototype.checkMove = function(pos, direction, speed) {
+Builder.prototype.validMove = function(pos, direction) {
   pos = typeof pos !== 'undefined' ? pos : this.pos;
   direction = typeof direction !== 'undefined' ? direction : this.direction;
-  speed = typeof speed !== 'undefined' ? speed: this.options.speed;
+  var width = this.options.width;
 
-  var _pos = pos;
-  var _direction = direction;
-  var _speed = speed;
-  var path = [_pos];
+  var distance = Math.ceil(width / 2);
+  var newPos = pos[direction](distance);
 
-  for(_speed; _speed > 0; _speed--) {
-    _pos = _pos[_direction]();
-
-    if(this.checkPos(_pos)) {
-        path.push(_pos);
-    } else {
-      return false;
-    }
-  }
-
-  return path;
-};
-
-Builder.prototype.checkTurn = function(pos) {
-  pos = typeof pos !== 'undefined' ? pos : this.pos;
-
-  var _pos = pos;
-  var pos0 = _pos;
-  var pDirections = this.possibleDirections(_pos, true);
-  var direction;
-  var pathes = [];
-  var path;
-
-  for(var pD in pDirections) {
-    _pos = pos0;
-    direction = pDirections[pD];
-
-    path = this.checkMove(_pos, direction, this.options.width + this.options.paddings);
-
-    if(path !== false) {
-      pathes.push({direction: direction, path: path});
-    }
-  }
-
-  if(pathes.length > 0) {
-    return Tool.randAttr(pathes);
+  if(
+    this.checkPos(newPos, direction)
+  ) {
+    return newPos;
   } else {
     return false;
   }
 };
 
-Builder.prototype.checkPos = function(pos) {
+Builder.prototype.validDirections = function(pos) {
   pos = typeof pos !== 'undefined' ? pos : this.pos;
 
-  if(
-    this.tgtMatrix.contains(pos, true)
-  ) {
-    if(this.jobCondition(this, pos)) {
-      var neighbors = pos.neighbors(this.options.paddings);
+  var newPos = pos;
+  var pos0 = newPos;
+  var pDirections = this.possibleDirections(pos0, true);
+  var direction;
+  var vDirections = [];
 
-      for(var n in neighbors) {
-        if(
-          this.tgtMatrix.contains(neighbors[n]) &&
-          this.jobCondition(this, neighbors[n])
-        ) {
-          return true;
-        }
-      }
+  for(var pD in pDirections) {
+    direction = pDirections[pD];
+
+    if(
+      this.validMove(pos0[direction](), direction) !== false &&
+      this.validMove(pos0[direction](2), direction) !== false
+    ) {
+      vDirections.push(direction);
     }
+  }
+
+  if(vDirections.length > 0) {
+    return vDirections;
+  } else {
+    return false;
+  }
+};
+
+Builder.prototype.checkPos = function(pos, direction) {
+  pos = typeof pos !== 'undefined' ? pos : this.pos;
+  direction = typeof direction !== 'undefined' ? direction : this.direction;
+
+  if(
+    this.tgtMatrix.contains(pos, true) &&
+    this.jobCondition(this, pos, direction)
+  ) {
+    return true;
   }
 
   return false;
 };
 
-function BuilderManager(ship) {
-  'use strict';
-
-  this.ship = ship;
-  this.tgtMatrix = ship.matrix;
-  this.buildersCount = 0;
-  this.generation = 0;
-  this.builders = {
-    current: [],
-    stash: []
-  };  
-}
-
-BuilderManager.prototype.addBuilder = function(type, options) {
-  var builders = this.builders;
-  var builder = new window[type](this, options);
-
-  if(this.builders.current.length === 0) {
-    builders.current.push(builder);
-  } else {
-    builders.stash.push(builder);
-  }
-
-  this.buildersCount++;
-};
-
-BuilderManager.prototype.recycle = function() {
-  var builders = this.builders;
-
-  for(var b = builders.current.length - 1; b >= 0; b--) {
-    if(builders.current[b].alive === false) {
-      builders.current.splice(b, 1);
-    }
-  }
-
-  if(builders.current.length === 0) {
-    builders.current = builders.stash;
-    builders.stash = [];
-    this.generation++;
-    console.log('end of generation');
-  }
-};
-
-BuilderManager.prototype.build = function() {
-  // var builders = this.builders;
-
-  // while(builders.current.length > 0) {
-  //   for(var b in builders.current) {
-  //     builders.current[b].work();
-  //   }
-  //   this.recycle();
-  // }
-
-  var self = this;
-  var i = setInterval(function() {
-    var builders = self.builders;
-
-    if(builders.current.length > 0 && self.ship.blueprints.length > 0) {
-      for(var b in builders.current) {
-        builders.current[b].work();
-      }
-      self.recycle();
-    } else {
-      clearInterval(i);
-      console.log('stopped building');
-    }
-  }, 100);
-  console.log('started building');
-};
-
-BuilderManager.prototype.addTunneler = function(options) {
-  options = typeof options !== 'undefined' ? options : {};
-  options.paddings = typeof options.paddings !== 'undefined' ? options.paddings : this.tgtMatrix.paddings;
-
-  this.addBuilder('Tunneler', options);
-};
-
-BuilderManager.prototype.addRoomer = function(options) {
-  options = typeof options !== 'undefined' ? options : {};
-  options.paddings = typeof options.paddings !== 'undefined' ? options.paddings : this.tgtMatrix.paddings;
-
-  this.addBuilder('Roomer', options);
-};
-
-BuilderManager.prototype.placeRoom = function(room, point) {
-  var ship = this.ship;
-  var srcMatrix = room.matrix;
-  var destMatrix = ship.matrix;
-
-  srcMatrix.transferTo(destMatrix, point);
-  this.discartBlueprint();
-  this.logRoom(room, point);
-  // console.log('placed at ' + point.x + ' ' + point.y + ' ' + point.z);
-};
-
-BuilderManager.prototype.logRoom = function(room, point) {
-  var ship = this.ship;
-
-  var log = {
-    room: room,
-    at: point
-  };
-
-  ship.rooms.push(log);
-};
-
-BuilderManager.prototype.discartBlueprint = function() {
-  this.ship.blueprints.splice(0, 1);
-};
-
-function Tunneler(manager, options) {
+function Cleaner(manager, options) {
   'use strict';
 
   options = typeof options !== 'undefined' ? options : {};
-  options.type = 'Tunneler';
-  options.width = typeof options.width !== 'undefined' ? options.width : Tunneler.defaults.width();
-
-  Builder.call(this, manager, Tunneler.job, Tunneler.jobCondition, options);
-}
-
-Tunneler.defaults = {
-  width: function() {
-    return Tool.randAttr([1, 3]);
-  }
-};
-
-Tunneler.prototype = Object.create(Builder.prototype);
-Tunneler.prototype.constructor = Tunneler;
-
-Tunneler.genCorridor = function(tunneler) {
-  var id = tunneler.id;
-  var sA = tunneler.secondaryAxis;
-  var width = tunneler.options.width;
-  var boundaries;
-
-  if(sA === 'x') {
-    boundaries = new Boundaries(width, 1, 1);
-  } else if(sA === 'y') {
-    boundaries = new Boundaries(1, width, 1);
-  }
-
-  var corridor = new Matrix(boundaries);
-  corridor.fill(function() {
-    return new Corridor(id);
-  });
+  options.type = 'Cleaner';
   
-  return corridor;
+  if(typeof options.tgtId === 'undefined') {
+    console.error('Cleaner declared without tgtId');
+  }
+
+  Builder.call(this, manager, Cleaner.job, Cleaner.jobCondition, options);
+} 
+
+Cleaner.prototype = Object.create(Builder.prototype);
+Cleaner.prototype.constructor = Cleaner;
+
+Cleaner.prototype.work = function() {
+  if(this.jobCondition(this)) {
+    this.job(this);
+  } else {
+    this.die();
+  }
 };
 
-Tunneler.prototype.spawn = function() {
-  if(this.alive) {
-    var pDirections = this.possibleDirections(this.pos, true);
-    var direction;
-    var types = ['Tunneler', 'Roomer']; 
-    var type;
-    var i = Tool.randRange(0, pDirections.length - 1);
+Cleaner.job = function(cleaner) {
+  var tgtMatrix = cleaner.tgtMatrix;
+  var tgtList = cleaner.options.tgtList;
+  var tgtPos = tgtList[tgtList.length - 1];
 
-    var offset = Math.ceil(this.options.width / 2);
+  tgtMatrix.val(tgtPos, new Cell());
+  tgtList.splice(-1, 1);
+  // console.log('cleaned');
+};
 
-    for(i; i >= 0; i--) {
-      direction = pDirections[i];
-      type = Tool.weightedRandAttr(['Tunneler', 'Roomer'], Ship.gen.params.corridorsVsRooms);
+Cleaner.jobCondition = function(cleaner) {
+  var tgtMatrix = cleaner.tgtMatrix;
+  var tgtList = cleaner.options.tgtList;
+  var tgtId = cleaner.options.tgtId;
+  var radius = Math.ceil(cleaner.options.width / 2);
 
-      switch(type) {
-        case 'Tunneler':
-          this.manager.addTunneler({startingPos: this.pos[direction](offset), startingDir: direction});
-          break;
+  if(tgtList.length > 0) {
+    var tgtPos = tgtList[tgtList.length - 1];
+    var nInAxis;
+    
+    if(tgtList.length === 1) {
+      var direction = cleaner.direction;
+      var sAxis = cleaner.secondaryAxis;
 
-        case 'Roomer':
-          this.manager.addRoomer({startingPos: this.pos[direction](offset), startingDir: direction});
-          break;
+      nInAxis = tgtPos.neighborsInAxis(sAxis, radius);
+      nInAxis.push(tgtPos[direction]());
+    } else {
+      nInAxis = tgtPos.neighborsBothAxes(radius);
+    }
+
+    for(var nIA in nInAxis) {
+      var cell = tgtMatrix.val(nInAxis[nIA]);
+
+      if(cell.id !== tgtId && cell.type !== 'void') {
+        return false;
       }
+    }
+  } else {
+    return false;
+  }
 
-      console.log('spawned');
+  return true;
+};
+
+function Connector(manager, options) {
+  'use strict';
+
+  options = typeof options !== 'undefined' ? options : {};
+  options.type = 'Connector';
+
+  Builder.call(this, manager, Connector.job, Connector.jobCondition, options);
+} 
+
+Connector.prototype = Object.create(Builder.prototype);
+Connector.prototype.constructor = Connector;
+
+Connector.prototype.work = function() {
+  if(this.manager.ship.blueprints.length > 0) {
+    this.room = Connector.genRoom(this);
+
+    if(this.jobCondition(this)) {
+      this.job(this);
     }
   }
+  
+  this.die();
 };
 
+Connector.genRoom = function(roomer) {
+  var id = roomer.id;
+  var size = roomer.manager.ship.blueprints[0];
 
-Tunneler.job = function(tunneler) {
-  var corridor = tunneler.corridor;
-  var pos = tunneler.pos.toTopLeft(corridor);
-  var tgtMatrix = tunneler.tgtMatrix;
-
-  corridor.transferTo(tgtMatrix, pos);
+  return new Room(id, size, 'rectangle'); //CHANGE SHAPE
 };
 
-Tunneler.jobCondition = function(tunneler, pos) {
-  if(tunneler.direction) {
-    tunneler.corridor = Tunneler.genCorridor(tunneler);
-    var tgtMatrix = tunneler.tgtMatrix;
-    var direction = tunneler.direction;
+Connector.job = function(roomer) {
+  var room = roomer.room;
+  var manager = roomer.manager;
+  var pos = roomer.pos;
+  var roomPos = roomer.roomPlacementPos();
 
-    var _pos = pos[direction]();
+  roomer.buildEntrance(pos);
+  manager.placeRoom(room, roomPos);
+};
 
-    return tgtMatrix.checkPlacement(tunneler.corridor, _pos);
-  } else {
-    return true;
+Connector.jobCondition = function(roomer) {
+  var _pos = roomer.roomPlacementPos();
+
+  return roomer.tgtMatrix.checkPlacement(roomer.room.matrix, _pos);
+};
+
+Connector.prototype.roomPlacementPos = function() {
+  var room = this.room;
+  var _pos = this.pos.toTopLeft(room.matrix);
+  var direction = this.direction;
+  var primaryAxis = this.primaryAxis;
+
+  _pos = _pos[direction](room.matrix.center[primaryAxis] + 1);
+
+  return _pos;
+};
+
+Connector.prototype.buildEntrance = function(pos) {
+  var secondaryAxis = this.secondaryAxis;
+  var sAxisLength = this.room.matrix.boundaries[secondaryAxis];
+  var maxEntrances = (sAxisLength  - 1) / 2;
+  var entranceCount = Tool.randRange(1, maxEntrances);
+
+  var entrancePos = this.entrancePlacementPos(pos);
+
+  while(entranceCount > 0 && entrancePos.length > 0) {
+    var selectedPos = Tool.randAttr(entrancePos);
+    var index = entrancePos.indexOf(selectedPos);
+
+    this.tgtMatrix.val(selectedPos, new RoomCell({
+      furniture: ['Door']//change to object
+    }));
+
+    var _index = index;
+    var exclude = 1;
+
+    if(typeof entrancePos[index - 1] !== 'undefined') {
+      _index--;
+      exclude++;
+    }
+
+    if(typeof entrancePos[index + 1] !== 'undefined') {
+      exclude++;
+    }
+    
+    entrancePos.splice(_index, exclude);
+    entranceCount--;
   }
+};
+
+Connector.prototype.entrancePlacementPos = function(pos) {
+  var tgtMatrix = this.tgtMatrix;
+  var reverseDir = this.reverseDirection();
+  var secondaryAxis = this.secondaryAxis;
+  var sAxisLength = this.room.matrix.boundaries[secondaryAxis];
+  var radius = Math.floor(sAxisLength / 2);
+
+  var entrancePos = pos.inAxis(secondaryAxis, radius);
+
+  var cell;
+  for(var e = entrancePos.length - 1; e >= 0; e--) {
+    cell = tgtMatrix.val(entrancePos[e][reverseDir]());
+
+    if(cell.type !== 'corridor') {
+      entrancePos.splice(e, 1);
+    }
+  }
+
+  return entrancePos;
 };
 
 function Roomer(manager, options) {
@@ -1382,6 +1407,7 @@ Roomer.prototype = Object.create(Builder.prototype);
 Roomer.prototype.constructor = Roomer;
 
 Roomer.prototype.work = function() {
+  // this.tgtMatrix.val(this.pos, new RoomCell());
   if(this.manager.ship.blueprints.length > 0) {
     this.room = Roomer.genRoom(this);
 
@@ -1420,19 +1446,20 @@ Roomer.prototype.roomPlacementPos = function() {
   var room = this.room;
   var _pos = this.pos.toTopLeft(room.matrix);
   var direction = this.direction;
-  var primaryAxis = this.primaryAxis;
+  var pAxis = this.primaryAxis;
 
-  _pos = _pos[direction](room.matrix.center[primaryAxis] + 1);
+  _pos = _pos[direction](room.matrix.center[pAxis] + 1);
 
   return _pos;
 };
 
 Roomer.prototype.buildEntrance = function(pos) {
-  var secondaryAxis = this.secondaryAxis;
-  var sAxisLength = this.room.matrix.boundaries[secondaryAxis];
+  var sAxis = this.secondaryAxis;
+  var sAxisLength = this.room.matrix.boundaries[sAxis];
   var maxEntrances = (sAxisLength  - 1) / 2;
   var entranceCount = Tool.randRange(1, maxEntrances);
-  var entrancePos = pos.neighborsInAxis(secondaryAxis, maxEntrances);
+
+  var entrancePos = this.entrancePlacementPos(pos);
 
   while(entranceCount > 0 && entrancePos.length > 0) {
     var selectedPos = Tool.randAttr(entrancePos);
@@ -1445,12 +1472,12 @@ Roomer.prototype.buildEntrance = function(pos) {
     var _index = index;
     var exclude = 1;
 
-    if(typeof selectedPos[index - 1] !== 'undefined') {
+    if(typeof entrancePos[index - 1] !== 'undefined') {
       _index--;
       exclude++;
     }
 
-    if(typeof selectedPos[index + 1] !== 'undefined') {
+    if(typeof entrancePos[index + 1] !== 'undefined') {
       exclude++;
     }
     
@@ -1459,6 +1486,300 @@ Roomer.prototype.buildEntrance = function(pos) {
   }
 };
 
+Roomer.prototype.entrancePlacementPos = function(pos) {
+  var tgtMatrix = this.tgtMatrix;
+  var reverseDir = this.reverseDirection();
+  var secondaryAxis = this.secondaryAxis;
+  var sAxisLength = this.room.matrix.boundaries[secondaryAxis];
+  var radius = Math.floor(sAxisLength / 2);
+
+  var entrancePos = pos.inAxis(secondaryAxis, radius);
+
+  var cell;
+  for(var e = entrancePos.length - 1; e >= 0; e--) {
+    cell = tgtMatrix.val(entrancePos[e][reverseDir]());
+
+    if(cell.type !== 'corridor') {
+      entrancePos.splice(e, 1);
+    }
+  }
+
+  return entrancePos;
+};
+
+function Tunneler(manager, options) {
+  'use strict';
+
+  options = typeof options !== 'undefined' ? options : {};
+  options.type = 'Tunneler';
+  // options.width = typeof options.width !== 'undefined' ? options.width : Tunneler.defaults.width();
+  options.width = typeof options.width !== 'undefined' ? options.width : 1;
+  
+  Builder.call(this, manager, Tunneler.job, Tunneler.jobCondition, options);
+
+  this.history = [];
+  this.corridor = Tunneler.genCorridor(this);
+}
+
+Tunneler.defaults = {
+  width: function() {
+    return Tool.randAttr([1, 3]);
+  }
+};
+
+Tunneler.prototype = Object.create(Builder.prototype);
+Tunneler.prototype.constructor = Tunneler;
+
+Tunneler.genCorridor = function(tunneler) {
+  var id = tunneler.id;
+  var width = tunneler.options.width;
+  var boundaries = new Boundaries(width, width, 1);
+  var corridor = new Matrix(boundaries);
+
+  corridor.fill(function() {
+    return new Corridor(id);
+  });
+  
+  return corridor;
+};
+
+Tunneler.prototype.spawn = function() {
+  if(this.alive && this.manager.ship.blueprints.length > 0) {
+    var pDirections = this.possibleDirections(this.pos, true);
+    var direction;
+    var types = ['Tunneler', 'Roomer']; 
+    var type;
+    var i = Tool.randRange(0, pDirections.length - 1);
+
+    var offset = Math.ceil(this.options.width / 2);
+
+    for(i; i >= 0; i--) {
+      direction = pDirections[i];
+      type = Tool.weightedRandAttr(['Tunneler', 'Roomer'], Ship.gen.params.corridorsVsRooms);
+
+      switch(type) {
+        case 'Tunneler':
+          this.manager.addTunneler({startingPos: this.pos[direction](offset), startingDir: direction});
+          break;
+
+        case 'Roomer':
+          this.manager.addRoomer({startingPos: this.pos[direction](offset), startingDir: direction});
+          break;
+      }
+
+      // console.log('spawned');
+    }
+  }
+};
+
+
+Tunneler.job = function(tunneler) {
+  var corridor = tunneler.corridor;
+  var pos = tunneler.pos.toTopLeft(corridor);
+  var tgtMatrix = tunneler.tgtMatrix;
+
+  tunneler.history.push(pos);
+  corridor.transferTo(tgtMatrix, pos);
+};
+
+Tunneler.jobCondition = function(tunneler, pos, direction) {
+  var tgtMatrix = tunneler.tgtMatrix;
+  var width = Math.ceil(tunneler.options.width / 2);
+  
+  var sAxis = Tool.perpendicularAxis(Tool.dirToAxis(direction));
+  var poses = pos.neighborsInAxis(sAxis, width);
+  
+  var cell;
+  for(var p in poses) {
+    cell = tgtMatrix.val(poses[p]);
+
+    if(cell.type !== 'void') {
+      return false;
+    }
+  }
+
+  cell = tgtMatrix.val(pos[direction]());
+
+  if(cell.type !== 'void' && cell.type !== 'corridor') {
+    return false;
+  }
+
+  return true;
+};
+
+Tunneler.prototype.die = function() {
+  this.alive = false;
+  this.manager.addCleaner({startingPos: this.pos, startingDir: this.options.startingDir, width: this.options.width, tgtId: this.id, tgtList: this.history});
+};
+function BuilderManager(ship) {
+  'use strict';
+
+  this.ship = ship;
+  this.tgtMatrix = ship.matrix;
+  this.buildersCount = 0;
+  this.generation = 0;
+  this.builders = {
+    current: [],
+    stash: [],
+    finals: [[]]
+  };  
+}
+
+BuilderManager.prototype.addBuilder = function(type, options) {
+  var builders = this.builders;
+  var builder = new window[type](this, options);
+
+  if(this.builders.current.length === 0) {
+    builders.current.push(builder);
+  } else {
+    builders.stash.push(builder);
+  }
+  
+  this.buildersCount++;
+};
+
+BuilderManager.prototype.addFinal = function(type, options) {
+  var finals = this.builders.finals;
+
+  var _final = new window[type](this, options);
+  
+  finals[finals.length - 1].push(_final);
+
+  this.buildersCount++;
+};
+
+BuilderManager.prototype.recycle = function() {
+  var current = this.builders.current;
+  var stash = this.builders.stash;
+
+  for(var b = current.length - 1; b >= 0; b--) {
+    if(current[b].alive === false) {
+      current.splice(b, 1);
+    }
+  }
+
+  if(current.length === 0 && stash.length > 0) {
+    this.builders.current = stash;
+    this.builders.stash = [];
+
+    this.builders.finals.push([]);
+    
+    console.log('end of generation');
+    this.generation++;
+  }
+
+
+};
+
+BuilderManager.prototype.recycleFinals = function() {
+  var finals = this.builders.finals;
+  var currentFinals = finals[finals.length - 1];
+
+  for(var cF = currentFinals.length - 1; cF >= 0; cF--) {
+    if(currentFinals[cF].alive === false) {
+      currentFinals.splice(cF, 1);
+    }
+  }
+
+  finals[finals.length - 1] = currentFinals;
+
+  if(currentFinals.length === 0) {
+    finals.splice(finals.length - 1, 1);
+  }
+
+  this.builders.finals = finals;
+};
+
+BuilderManager.prototype.build = function() {
+  // var builders = this.builders;
+
+  // while(builders.current.length > 0) {
+  //   for(var b in builders.current) {
+  //     builders.current[b].work();
+  //   }
+  //   this.recycle();
+  // }
+
+  var self = this;
+  var i = setInterval(function() {
+    var builders = self.builders;
+
+    if(builders.current.length > 0) {
+      for(var b in builders.current) {
+        builders.current[b].work();
+      }
+      self.recycle();
+    } else {
+      clearInterval(i);
+      console.log('stopped building');
+      self.finalize();
+    }
+  }, 100);
+  console.log('started building');
+};
+
+BuilderManager.prototype.finalize = function() {
+  var self = this;
+  var i = setInterval(function() {
+    var finals = self.builders.finals;
+
+    if(finals.length > 0) {
+      var currentFinals = finals[finals.length - 1];
+      for(var f in currentFinals) {
+        currentFinals[f].work();
+      }
+      self.recycleFinals();
+    } else {
+      clearInterval(i);
+      console.log('stopped finalizing');
+    }
+  }, 100);
+  console.log('started finalizing');
+};
+
+BuilderManager.prototype.addTunneler = function(options) {
+  options = typeof options !== 'undefined' ? options : {};
+  options.paddings = typeof options.paddings !== 'undefined' ? options.paddings : this.tgtMatrix.paddings;
+
+  this.addBuilder('Tunneler', options);
+};
+
+BuilderManager.prototype.addRoomer = function(options) {
+  options = typeof options !== 'undefined' ? options : {};
+  options.paddings = typeof options.paddings !== 'undefined' ? options.paddings : this.tgtMatrix.paddings;
+
+  this.addBuilder('Roomer', options);
+};
+
+BuilderManager.prototype.addCleaner = function(options) {
+  this.addFinal('Cleaner', options);
+};
+
+BuilderManager.prototype.placeRoom = function(room, point) {
+  var ship = this.ship;
+  var srcMatrix = room.matrix;
+  var destMatrix = ship.matrix;
+
+  srcMatrix.transferTo(destMatrix, point);
+  this.discartBlueprint();
+  this.logRoom(room, point);
+  // console.log('placed at ' + point.x + ' ' + point.y + ' ' + point.z);
+};
+
+BuilderManager.prototype.logRoom = function(room, point) {
+  var ship = this.ship;
+
+  var log = {
+    room: room,
+    at: point
+  };
+
+  ship.rooms.push(log);
+};
+
+BuilderManager.prototype.discartBlueprint = function() {
+  this.ship.blueprints.splice(0, 1);
+};
 function Module(type, size) {
   'use strict';
   
