@@ -102,16 +102,9 @@ Ship.prototype.build = function() {
 
   this.builderManager.addTunneler();
   this.builderManager.build();
-
-  // new Tunneler(ship.matrix);
-  // new Tunneler(ship.matrix);
-  // new Tunneler(ship.matrix);
-  // while(ship.roomCount > ship.rooms.length) {
-  //   ShipGen.randRule('roomPlacement.patterns')(ship);
-  //   // ShipGen.getRule('roomPlacement.patterns', 'cluster')(ship, rC);
-  // }
   
   this.matrix.flatten();
 
-  //matrix.trim(); fix trim
+  this.matrix.trim();
+  this.matrix.mirror('x', 2);
 };

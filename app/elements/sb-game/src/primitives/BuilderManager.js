@@ -78,50 +78,69 @@ BuilderManager.prototype.recycleFinals = function() {
 };
 
 BuilderManager.prototype.build = function() {
-  // var builders = this.builders;
+  var builders = this.builders;
 
-  // while(builders.current.length > 0) {
-  //   for(var b in builders.current) {
-  //     builders.current[b].work();
-  //   }
-  //   this.recycle();
-  // }
-
-  var self = this;
-  var i = setInterval(function() {
-    var builders = self.builders;
-
-    if(builders.current.length > 0) {
-      for(var b in builders.current) {
-        builders.current[b].work();
-      }
-      self.recycle();
-    } else {
-      clearInterval(i);
-      console.log('stopped building');
-      self.finalize();
-    }
-  }, 100);
   console.log('started building');
+
+  while(builders.current.length > 0) {
+    for(var b in builders.current) {
+      builders.current[b].work();
+    }
+    this.recycle();
+  }
+
+  this.finalize();
+  console.log('stopped building');
+
+  // var self = this;
+  // var i = setInterval(function() {
+  //   var builders = self.builders;
+
+  //   if(builders.current.length > 0) {
+  //     for(var b in builders.current) {
+  //       builders.current[b].work();
+  //     }
+  //     self.recycle();
+  //   } else {
+  //     clearInterval(i);
+  //     console.log('stopped building');
+  //     self.finalize();
+  //   }
+  // }, 100);
+  // console.log('started building');
 };
 
 BuilderManager.prototype.finalize = function() {
-  var self = this;
-  var i = setInterval(function() {
-    var finals = self.builders.finals;
+  var finals = this.builders.finals;
 
-    if(finals.length > 0) {
-      var currentFinals = finals[finals.length - 1];
-      for(var f in currentFinals) {
-        currentFinals[f].work();
-      }
-      self.recycleFinals();
-    } else {
-      clearInterval(i);
-      console.log('stopped finalizing');
-    }
-  }, 100);
   console.log('started finalizing');
+  
+  while(finals.length > 0) {
+    var currentFinals = finals[finals.length - 1];
+    for(var f in currentFinals) {
+      currentFinals[f].work();
+    }
+    this.recycleFinals();
+  }
+
+  console.log('stopped finalizing');
+
+  // var self = this;
+  // var i = setInterval(function() {
+  //   var finals = self.builders.finals;
+
+  //   if(finals.length > 0) {
+  //     var currentFinals = finals[finals.length - 1];
+  //     for(var f in currentFinals) {
+  //       currentFinals[f].work();
+  //     }
+  //     self.recycleFinals();
+  //   } else {
+  //     clearInterval(i);
+  //     console.log('stopped finalizing');
+  //   }
+  // }, 100);
+  // console.log('started finalizing');
 };
 
 BuilderManager.prototype.addTunneler = function(options) {

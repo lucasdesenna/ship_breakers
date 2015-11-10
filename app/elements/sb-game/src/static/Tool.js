@@ -22,7 +22,7 @@ Tool.dirToAxis = function(direction) {
   }
 
   return axis;
-}
+};
 
 Tool.perpendicularAxis = function(axis) {
   var pAxis;

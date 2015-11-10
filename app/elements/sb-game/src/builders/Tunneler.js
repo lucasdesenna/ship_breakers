@@ -101,4 +101,11 @@ Tunneler.jobCondition = function(tunneler, pos, direction) {
 Tunneler.prototype.die = function() {
   this.alive = false;
   this.manager.addCleaner({startingPos: this.pos, startingDir: this.options.startingDir, width: this.options.width, tgtId: this.id, tgtList: this.history});
+  
+  if(this.id === 0) {
+    var rHistory = this.history.slice(0);
+    rHistory.reverse();
+    
+    this.manager.addCleaner({startingPos: this.options.startingPos, startingDir: this.options.startingDir, width: this.options.width, tgtId: this.id, tgtList: rHistory});
+  }
 };

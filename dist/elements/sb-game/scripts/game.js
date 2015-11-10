@@ -22,7 +22,7 @@ Tool.dirToAxis = function(direction) {
   }
 
   return axis;
-}
+};
 
 Tool.perpendicularAxis = function(axis) {
   var pAxis;
@@ -561,41 +561,123 @@ Matrix.prototype.flatten = function() {
 };
 
 Matrix.prototype.trim = function() {
-  var trimmed = this;
-  var boundaries = this.boundaries;
+  var emptyX = [],
+      emptyY = [],
+      emptyZ = [];
+  var cell;
 
-  var emptyX = [];
-  for(var i = 0; i < boundaries.y; i++) {
-    emptyX[i] = true;
-  }
+  this.iterate(function(m, x, y, z) {
+    cell = m.body[x][y][z];
 
-  var emptyY;
-  for (var x = 0; x < boundaries.x; x++) {
-    emptyY = true;
-    for (var y = 0; y < boundaries.y; y++) {
-      for (var z = 0; z < boundaries.z; z++) {
-        if(trimmed.body[x][y][z]) {
-          emptyY = false;
-          emptyX[y] = false;
-          break;
+    if(cell.type !== 'void') {
+      emptyX[x] = false;
+      emptyY[y] = false;
+      emptyZ[z] = false;
+    } else {
+      if(emptyX[x] !== false) emptyX[x] = true;
+      if(emptyY[y] !== false) emptyY[y] = true;
+      if(emptyZ[z] !== false) emptyZ[z] = true;
+    }
+  });
+
+  var clone = this.clone();
+
+  for(var x = emptyX.length - 1; x >= 0; x--) {
+    if(emptyX[x] === true) {
+      clone.body.splice(x, 1);
+    } else {
+      for(var y = emptyY.length - 1; y >= 0; y--) {
+        if(emptyY[y] === true) {
+          clone.body[x].splice(y, 1);
+        } else {
+          for(var z = emptyZ.length - 1; z >= 0; z--) {
+            if(emptyZ[z] === true) {
+              clone.body[x][y].splice(z, 1);
+            }
+          }
         }
       }
     }
-    if(emptyY) {
-      trimmed.body[x].splice(x, 1);
-    }
   }
 
-  for(var eX = emptyX.length - 1; eX === 0; eX--) {
-    if(emptyX[eX]) {
-      for(var col = trimmed.body.length - 1; col === 0; col--) {
-        trimmed.body[col].splice(eX, 1);
-      }
-    }
-  }
-
-  this.body = trimmed.body;
+  this.body = clone.body;
   this.update();
+};
+
+Matrix.prototype.mirror = function(axis, offset) {
+  axis = typeof axis !== 'undefined' ? axis : 'x';
+  offset = typeof offset !== 'undefined' ? offset : 0;
+
+  var clone;
+  var x;
+  var y;
+  var z;
+
+  if(offset > 0) {
+    this.slice(axis, -offset, offset);
+  }
+  
+  clone = this.clone();
+
+  switch(axis) {
+    case 'x':
+      clone.body.reverse();
+      this.body = this.body.concat(clone.body);
+      break;
+
+    case 'y':
+      for(x in clone.body) {
+        clone.body[x].reverse();
+        this.body[x] = this.body[x].concat(clone.body[x]);
+      }
+      break;
+
+    case 'z':
+      for(x in clone.body) {
+        for(y in clone.body[x]) {
+          clone.body[x][y].reverse();
+          this.body[x][y] = this.body[x][y].concat(clone.body[x][y]);
+        }
+      }
+      break;
+  }
+
+  this.update();
+  console.log('mirrored');
+};
+
+Matrix.prototype.slice = function(axis, start, howMany) {
+  axis = typeof axis !== 'undefined' ? axis : 'x';
+  howMany = typeof howMany !== 'undefined' ? howMany : 1;
+  start = typeof start !== 'undefined' ? start : -howMany;
+
+  var clone = this.clone();
+  var x;
+  var y;
+  var z;
+
+  switch(axis) {
+    case 'x':
+      this.body.splice(start, howMany);
+      break;
+
+    case 'y':
+      for(x in clone.body) {
+        this.body[x].splice(start, howMany);
+      }
+      break;
+
+    case 'z':
+      for(x in clone.body) {
+        for(y in clone.body[x]) {
+          this.body[x][y].splice(start, howMany);
+        }
+      }
+      break;
+  }
+
+  this.update();
+  // console.log('sliced');
 };
 
 Matrix.prototype.checkPlacement = function(srcMatrix, pos) {
@@ -1610,6 +1692,13 @@ Tunneler.jobCondition = function(tunneler, pos, direction) {
 Tunneler.prototype.die = function() {
   this.alive = false;
   this.manager.addCleaner({startingPos: this.pos, startingDir: this.options.startingDir, width: this.options.width, tgtId: this.id, tgtList: this.history});
+  
+  if(this.id === 0) {
+    var rHistory = this.history.slice(0);
+    rHistory.reverse();
+    
+    this.manager.addCleaner({startingPos: this.options.startingPos, startingDir: this.options.startingDir, width: this.options.width, tgtId: this.id, tgtList: rHistory});
+  }
 };
 function BuilderManager(ship) {
   'use strict';
@@ -1691,50 +1780,69 @@ BuilderManager.prototype.recycleFinals = function() {
 };
 
 BuilderManager.prototype.build = function() {
-  // var builders = this.builders;
+  var builders = this.builders;
 
-  // while(builders.current.length > 0) {
-  //   for(var b in builders.current) {
-  //     builders.current[b].work();
-  //   }
-  //   this.recycle();
-  // }
-
-  var self = this;
-  var i = setInterval(function() {
-    var builders = self.builders;
-
-    if(builders.current.length > 0) {
-      for(var b in builders.current) {
-        builders.current[b].work();
-      }
-      self.recycle();
-    } else {
-      clearInterval(i);
-      console.log('stopped building');
-      self.finalize();
-    }
-  }, 100);
   console.log('started building');
+
+  while(builders.current.length > 0) {
+    for(var b in builders.current) {
+      builders.current[b].work();
+    }
+    this.recycle();
+  }
+
+  this.finalize();
+  console.log('stopped building');
+
+  // var self = this;
+  // var i = setInterval(function() {
+  //   var builders = self.builders;
+
+  //   if(builders.current.length > 0) {
+  //     for(var b in builders.current) {
+  //       builders.current[b].work();
+  //     }
+  //     self.recycle();
+  //   } else {
+  //     clearInterval(i);
+  //     console.log('stopped building');
+  //     self.finalize();
+  //   }
+  // }, 100);
+  // console.log('started building');
 };
 
 BuilderManager.prototype.finalize = function() {
-  var self = this;
-  var i = setInterval(function() {
-    var finals = self.builders.finals;
+  var finals = this.builders.finals;
 
-    if(finals.length > 0) {
-      var currentFinals = finals[finals.length - 1];
-      for(var f in currentFinals) {
-        currentFinals[f].work();
-      }
-      self.recycleFinals();
-    } else {
-      clearInterval(i);
-      console.log('stopped finalizing');
-    }
-  }, 100);
   console.log('started finalizing');
+  
+  while(finals.length > 0) {
+    var currentFinals = finals[finals.length - 1];
+    for(var f in currentFinals) {
+      currentFinals[f].work();
+    }
+    this.recycleFinals();
+  }
+
+  console.log('stopped finalizing');
+
+  // var self = this;
+  // var i = setInterval(function() {
+  //   var finals = self.builders.finals;
+
+  //   if(finals.length > 0) {
+  //     var currentFinals = finals[finals.length - 1];
+  //     for(var f in currentFinals) {
+  //       currentFinals[f].work();
+  //     }
+  //     self.recycleFinals();
+  //   } else {
+  //     clearInterval(i);
+  //     console.log('stopped finalizing');
+  //   }
+  // }, 100);
+  // console.log('started finalizing');
 };
 
 BuilderManager.prototype.addTunneler = function(options) {
@@ -1892,18 +2000,11 @@ Ship.prototype.build = function() {
 
   this.builderManager.addTunneler();
   this.builderManager.build();
-
-  // new Tunneler(ship.matrix);
-  // new Tunneler(ship.matrix);
-  // new Tunneler(ship.matrix);
-  // while(ship.roomCount > ship.rooms.length) {
-  //   ShipGen.randRule('roomPlacement.patterns')(ship);
-  //   // ShipGen.getRule('roomPlacement.patterns', 'cluster')(ship, rC);
-  // }
   
   this.matrix.flatten();
 
-  //matrix.trim(); fix trim
+  this.matrix.trim();
+  this.matrix.mirror('x', 2);
 };
 
 function Main() {

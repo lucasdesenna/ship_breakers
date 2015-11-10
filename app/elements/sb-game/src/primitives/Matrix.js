@@ -90,41 +90,123 @@ Matrix.prototype.flatten = function() {
 };
 
 Matrix.prototype.trim = function() {
-  var trimmed = this;
-  var boundaries = this.boundaries;
+  var emptyX = [],
+      emptyY = [],
+      emptyZ = [];
+  var cell;
 
-  var emptyX = [];
-  for(var i = 0; i < boundaries.y; i++) {
-    emptyX[i] = true;
-  }
+  this.iterate(function(m, x, y, z) {
+    cell = m.body[x][y][z];
 
-  var emptyY;
-  for (var x = 0; x < boundaries.x; x++) {
-    emptyY = true;
-    for (var y = 0; y < boundaries.y; y++) {
-      for (var z = 0; z < boundaries.z; z++) {
-        if(trimmed.body[x][y][z]) {
-          emptyY = false;
-          emptyX[y] = false;
-          break;
+    if(cell.type !== 'void') {
+      emptyX[x] = false;
+      emptyY[y] = false;
+      emptyZ[z] = false;
+    } else {
+      if(emptyX[x] !== false) emptyX[x] = true;
+      if(emptyY[y] !== false) emptyY[y] = true;
+      if(emptyZ[z] !== false) emptyZ[z] = true;
+    }
+  });
+
+  var clone = this.clone();
+
+  for(var x = emptyX.length - 1; x >= 0; x--) {
+    if(emptyX[x] === true) {
+      clone.body.splice(x, 1);
+    } else {
+      for(var y = emptyY.length - 1; y >= 0; y--) {
+        if(emptyY[y] === true) {
+          clone.body[x].splice(y, 1);
+        } else {
+          for(var z = emptyZ.length - 1; z >= 0; z--) {
+            if(emptyZ[z] === true) {
+              clone.body[x][y].splice(z, 1);
+            }
+          }
         }
       }
     }
-    if(emptyY) {
-      trimmed.body[x].splice(x, 1);
-    }
   }
 
-  for(var eX = emptyX.length - 1; eX === 0; eX--) {
-    if(emptyX[eX]) {
-      for(var col = trimmed.body.length - 1; col === 0; col--) {
-        trimmed.body[col].splice(eX, 1);
-      }
-    }
-  }
-
-  this.body = trimmed.body;
+  this.body = clone.body;
   this.update();
+};
+
+Matrix.prototype.mirror = function(axis, offset) {
+  axis = typeof axis !== 'undefined' ? axis : 'x';
+  offset = typeof offset !== 'undefined' ? offset : 0;
+
+  var clone;
+  var x;
+  var y;
+  var z;
+
+  if(offset > 0) {
+    this.slice(axis, -offset, offset);
+  }
+  
+  clone = this.clone();
+
+  switch(axis) {
+    case 'x':
+      clone.body.reverse();
+      this.body = this.body.concat(clone.body);
+      break;
+
+    case 'y':
+      for(x in clone.body) {
+        clone.body[x].reverse();
+        this.body[x] = this.body[x].concat(clone.body[x]);
+      }
+      break;
+
+    case 'z':
+      for(x in clone.body) {
+        for(y in clone.body[x]) {
+          clone.body[x][y].reverse();
+          this.body[x][y] = this.body[x][y].concat(clone.body[x][y]);
+        }
+      }
+      break;
+  }
+
+  this.update();
+  console.log('mirrored');
+};
+
+Matrix.prototype.slice = function(axis, start, howMany) {
+  axis = typeof axis !== 'undefined' ? axis : 'x';
+  howMany = typeof howMany !== 'undefined' ? howMany : 1;
+  start = typeof start !== 'undefined' ? start : -howMany;
+
+  var clone = this.clone();
+  var x;
+  var y;
+  var z;
+
+  switch(axis) {
+    case 'x':
+      this.body.splice(start, howMany);
+      break;
+
+    case 'y':
+      for(x in clone.body) {
+        this.body[x].splice(start, howMany);
+      }
+      break;
+
+    case 'z':
+      for(x in clone.body) {
+        for(y in clone.body[x]) {
+          this.body[x][y].splice(start, howMany);
+        }
+      }
+      break;
+  }
+
+  this.update();
+  // console.log('sliced');
 };
 
 Matrix.prototype.checkPlacement = function(srcMatrix, pos) {
