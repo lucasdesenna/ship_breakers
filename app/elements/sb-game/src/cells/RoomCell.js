@@ -2,7 +2,8 @@ function RoomCell(id, entities) {
   'use strict';
 
   entities = typeof entities !== 'undefined' ? entities : {};
-  entities.tile = 'R';
+  // entities.tile = 'R'; //debug
+  entities.tile = '.';
 
   Cell.call(this, id, 'room', entities);
 }

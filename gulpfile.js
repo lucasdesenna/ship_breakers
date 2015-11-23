@@ -114,6 +114,7 @@ gulp.task('game', function () {
   gulp.src([
       'app/elements/sb-game/src/static/Tool.js',
       'app/elements/sb-game/src/static/Tiles.js',
+      'app/elements/sb-game/src/primitives/Seed.js',
       'app/elements/sb-game/src/primitives/Point.js',
       'app/elements/sb-game/src/primitives/Boundaries.js',
       'app/elements/sb-game/src/primitives/Cell.js',
@@ -122,7 +123,7 @@ gulp.task('game', function () {
       'app/elements/sb-game/src/primitives/Room.js',
       'app/elements/sb-game/src/primitives/Builder.js',
       'app/elements/sb-game/src/builders/*.js',
-      'app/elements/sb-game/src/primitives/BuilderManager.js',
+      'app/elements/sb-game/src/primitives/ShipEngineer.js',
       'app/elements/sb-game/src/super_classes/*.js',
       'app/elements/sb-game/src/Main.js', 
       'app/elements/sb-game/src/debug.js'

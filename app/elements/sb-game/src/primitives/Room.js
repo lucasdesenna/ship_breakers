@@ -1,15 +1,16 @@
 function Room(id, size, shape) {
   'use strict';
+
   this.id = id;
   this.size = size;
   this.shape = shape;
-  this.matrix = Room.gen.matrix(id, size, shape);
+
+  var boundaries = Room.gen.boundaries(size);
+  this.matrix = Room.gen.matrix(id, boundaries, shape);
 }
 
 Room.gen = {
-  matrix: function(id, size, shape) {
-    var boundaries = Room.gen.boundaries(size);
-
+  matrix: function(id, boundaries, shape) {
     var matrix = new Matrix(boundaries);
     Room.gen.shape(matrix, shape);
 
@@ -158,4 +159,12 @@ Room.gen = {
 
 Room.prototype.expand = function(radius) {
   return this.matrix.expand(radius);
+};
+
+Room.prototype.clone = function(id) {
+  var clone = new Room(id, this.size, this.shape);
+
+  clone.matrix = Room.gen.matrix(id, this.matrix.boundaries, this.shape);
+
+  return clone;
 };

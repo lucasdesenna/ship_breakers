@@ -13,7 +13,7 @@ ShipGen.roomPlacement = {
       room = new Room('random', 'rectangle');
 
       for (var pC = ShipGen.roomPlacement.chances; pC > 0; pC--) {
-        point = matrix.randPos(undefined, undefined, [0, 0]);
+        point = Tool.randPos(undefined, undefined, [0, 0]);
 
         if(ship.checkPlacement(room, point)) {
           ship.pushRoom(room, point);

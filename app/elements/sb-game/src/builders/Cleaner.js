@@ -1,4 +1,4 @@
-function Cleaner(manager, options) {
+function Cleaner(engineer, options) {
   'use strict';
 
   options = typeof options !== 'undefined' ? options : {};
@@ -8,7 +8,14 @@ function Cleaner(manager, options) {
     console.error('Cleaner declared without tgtId');
   }
 
-  Builder.call(this, manager, Cleaner.job, Cleaner.jobCondition, options);
+  if(typeof options.tgtList === 'undefined') {
+    console.error('Cleaner declared without tgtList');
+  }
+
+  Builder.call(this, engineer, Cleaner.job, Cleaner.jobCondition, options);
+
+  this.tgtId = this.options.tgtId;
+  this.tgtList = this.options.tgtList;
 } 
 
 Cleaner.prototype = Object.create(Builder.prototype);
@@ -17,6 +24,7 @@ Cleaner.prototype.constructor = Cleaner;
 Cleaner.prototype.work = function() {
   if(this.jobCondition(this)) {
     this.job(this);
+    this.moveOrTurn();
   } else {
     this.die();
   }
@@ -24,44 +32,56 @@ Cleaner.prototype.work = function() {
 
 Cleaner.job = function(cleaner) {
   var tgtMatrix = cleaner.tgtMatrix;
-  var tgtList = cleaner.options.tgtList;
-  var tgtPos = tgtList[tgtList.length - 1];
+  var pos = cleaner.pos;
+  var width = cleaner.options.width;
+  var cleanArea = new Matrix(new Boundaries(width, width, 1));
 
-  tgtMatrix.val(tgtPos, new Cell());
-  tgtList.splice(-1, 1);
+  cleanArea.transferTo(tgtMatrix, pos.toTopLeft(cleanArea), true);
   // console.log('cleaned');
 };
 
 Cleaner.jobCondition = function(cleaner) {
-  var tgtMatrix = cleaner.tgtMatrix;
-  var tgtList = cleaner.options.tgtList;
-  var tgtId = cleaner.options.tgtId;
-  var radius = Math.ceil(cleaner.options.width / 2);
+  if(cleaner.isAlive) {
+    var tgtMatrix = cleaner.tgtMatrix;
+    var tgtList = cleaner.tgtList;
+    var tgtId = cleaner.tgtId;
+    var width = cleaner.options.width;
+    var radius = Math.ceil(width / 2);
+    var pos = cleaner.pos;
+    var connectionsSelf = 0;
+    var connectionsOthers = 0;
 
-  if(tgtList.length > 0) {
-    var tgtPos = tgtList[tgtList.length - 1];
-    var nInAxis;
-    
-    if(tgtList.length === 1) {
-      var direction = cleaner.direction;
-      var sAxis = cleaner.secondaryAxis;
+    if(tgtList.length > 0) {
+      var parallels;
+      parallels = pos.parallels(radius, width);
 
-      nInAxis = tgtPos.neighborsInAxis(sAxis, radius);
-      nInAxis.push(tgtPos[direction]());
-    } else {
-      nInAxis = tgtPos.neighborsBothAxes(radius);
-    }
+      for(var p in parallels) {
+        if(tgtMatrix.contains(parallels[p])) {
+          var cell = tgtMatrix.val(parallels[p]);
 
-    for(var nIA in nInAxis) {
-      var cell = tgtMatrix.val(nInAxis[nIA]);
-
-      if(cell.id !== tgtId && cell.type !== 'void') {
-        return false;
+          if(cell.type === 'corridor' && cell.id === tgtId) {
+            connectionsSelf++;
+          } else if(cell.type !== 'void') {
+            connectionsOthers++;
+          } 
+        }
       }
+    } else {
+      return false;
     }
-  } else {
-    return false;
-  }
 
-  return true;
+    if(connectionsSelf >= width * 2 || tgtList.length > 1 && connectionsOthers >= 1 || tgtList.length === 1 && connectionsOthers >= 2) return false; else return true;
+  }
 };
+
+Cleaner.prototype.moveOrTurn = function() {
+  this.tgtList.splice(0, 1);
+
+  var tgtList = this.tgtList;
+
+  if(this.tgtList.length > 0) {
+    this.pos = tgtList[0];
+  } else {
+    this.die();
+  }
+}

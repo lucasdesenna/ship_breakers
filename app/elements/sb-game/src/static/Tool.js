@@ -2,6 +2,8 @@ function Tool() {
   'use strict';
 }
 
+Tool.debugMode = false;
+
 Tool.clone = function(object) {
   var clone = {};
 
@@ -37,7 +39,9 @@ Tool.perpendicularAxis = function(axis) {
 };
 
 Tool.randRange = function(min, max) {
-  return Math.round(Math.random() * (max - min) + min);
+  var seed = Main.seed;
+
+  return Math.round(seed.pick() * (max - min) + min);
 };
 
 Tool.randPercent= function() {
@@ -47,6 +51,19 @@ Tool.randPercent= function() {
 Tool.oneIn = function(universe) {
   return Tool.randRange(1, universe) === universe;
 };
+
+Tool.randPos = function(xRange, yRange, zRange) {
+  xRange = typeof xRange !== 'undefined' ? xRange : [0, this.boundaries.x - 1];
+  yRange = typeof yRange !== 'undefined' ? yRange : [0, this.boundaries.y - 1];
+  zRange = typeof zRange !== 'undefined' ? zRange : [0, this.boundaries.z - 1];
+
+  return new Point(
+    Tool.randRange(xRange[0], xRange[1]),
+    Tool.randRange(yRange[0], yRange[1]),
+    Tool.randRange(zRange[0], zRange[1])
+  );
+};
+
 
 Tool.randAttr = function(object, filter) {
   var obj = Tool.clone(object);

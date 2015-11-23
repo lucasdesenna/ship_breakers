@@ -14,12 +14,13 @@ html
     template
       style.
         :host {
+          position: absolute;
           display: block;
-          width: 100%;
           color: white;
           background: black;
           font-family: 'Roboto Mono';
           line-height: 1em;
+          white-space: nowrap;
         }
 
         .col {
@@ -32,10 +33,12 @@ html
         .col > .cell {
           display: block;
           width: 1em;
+          min-height: 1em;
           text-align: center;
           vertical-align: middle;
           padding: 0;
           margin: 0;
+          white-space: pre;
         }
 
       template#sb-screen(is='dom-repeat', items='{{renderData}}', as='col')
@@ -78,7 +81,7 @@ html
             this.gameProcess = setInterval(function() {
               self.set('renderData', window.Main.render());
               //- console.log('rendered');
-            }, 1000/ 25);
+            }, 1000 / 25);
             console.log('started rendering');
           }
         });

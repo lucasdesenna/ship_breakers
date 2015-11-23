@@ -1,18 +1,17 @@
-function Roomer(manager, options) {
+function Roomer(engineer, options) {
   'use strict';
 
   options = typeof options !== 'undefined' ? options : {};
   options.type = 'Roomer';
 
-  Builder.call(this, manager, Roomer.job, Roomer.jobCondition, options);
+  Builder.call(this, engineer, Roomer.job, Roomer.jobCondition, options);
 } 
 
 Roomer.prototype = Object.create(Builder.prototype);
 Roomer.prototype.constructor = Roomer;
 
 Roomer.prototype.work = function() {
-  // this.tgtMatrix.val(this.pos, new RoomCell());
-  if(this.manager.ship.blueprints.length > 0) {
+  if(this.engineer.blueprints.length > 0) {
     this.room = Roomer.genRoom(this);
 
     if(this.jobCondition(this)) {
@@ -25,19 +24,19 @@ Roomer.prototype.work = function() {
 
 Roomer.genRoom = function(roomer) {
   var id = roomer.id;
-  var size = roomer.manager.ship.blueprints[0];
+  var size = roomer.engineer.blueprints[0];
 
   return new Room(id, size, 'rectangle'); //CHANGE SHAPE
 };
 
 Roomer.job = function(roomer) {
   var room = roomer.room;
-  var manager = roomer.manager;
+  var engineer = roomer.engineer;
   var pos = roomer.pos;
   var roomPos = roomer.roomPlacementPos();
 
   roomer.buildEntrance(pos);
-  manager.placeRoom(room, roomPos);
+  engineer.placeRoom(room, roomPos);
 };
 
 Roomer.jobCondition = function(roomer) {
@@ -69,7 +68,7 @@ Roomer.prototype.buildEntrance = function(pos) {
     var selectedPos = Tool.randAttr(entrancePos);
     var index = entrancePos.indexOf(selectedPos);
 
-    this.tgtMatrix.val(selectedPos, new RoomCell({
+    this.tgtMatrix.val(selectedPos, new Entrance(this.id, {
       furniture: ['Door']//change to object
     }));
 

@@ -6,8 +6,8 @@ function Matrix(boundaries, paddings) {
 
   this.boundaries = boundaries;
   this.body = Matrix.genBody(boundaries);
-  this.center = this.getCenter(this);
-  this.volume = this.getVolume(this);
+  this.center = this.getCenter();
+  this.volume = this.getVolume();
   this.paddings = paddings;
 }
 
@@ -39,7 +39,9 @@ Matrix.prototype.iterate = function(operation, extra) {
   for (var x = 0; x < boundaries.x; x++) {
     for (var y = 0; y < boundaries.y; y++) {
       for (var z = 0; z < boundaries.z; z++) {
-        operation(this, x, y, z, extra);
+        var rtrn = operation(this, x, y, z, extra);
+        if(rtrn === 'continue') continue;
+        if(rtrn === 'break') return 'break';
       }
     }
   }
@@ -67,24 +69,32 @@ Matrix.prototype.fill = function(rule) {
   var matrix = this;
 
   matrix.iterate(function(matrix, x, y, z) {
-    matrix.body[x][y][z] = rule(matrix, x, y, z);
+    var r = rule(matrix, x, y, z);
+    if(r !== false) {
+      matrix.body[x][y][z] = r;
+    }
   });
 };
 
 Matrix.prototype.flatten = function() {
-  var matrix = this;
-
   var flatBoundaries = new Boundaries(
     this.boundaries.x,
     this.boundaries.y
   );
   var flatMatrix = new Matrix(flatBoundaries);
 
-  matrix.iterate(function(matrix, x, y, z) {
-    if(matrix.body[x][y][z]) {
-      flatMatrix.body[x][y][0] = 1;
+  this.iterate(function(m, x, y, z) {
+    var pos = new Point(x, y, z);
+    var cell = m.val(pos);
+
+    if(m.contains(pos) && cell.type !== 'void') {
+      var _pos = new Point(x, y, 0);
+
+      flatMatrix.val(_pos, cell);
     }
   });
+
+  this.body = flatMatrix.body;
 
   this.update();
 };
@@ -133,46 +143,47 @@ Matrix.prototype.trim = function() {
   this.update();
 };
 
-Matrix.prototype.mirror = function(axis, offset) {
-  axis = typeof axis !== 'undefined' ? axis : 'x';
-  offset = typeof offset !== 'undefined' ? offset : 0;
-
-  var clone;
+Matrix.prototype.flip = function(axis) {
   var x;
   var y;
-  var z;
-
-  if(offset > 0) {
-    this.slice(axis, -offset, offset);
-  }
-  
-  clone = this.clone();
 
   switch(axis) {
     case 'x':
-      clone.body.reverse();
-      this.body = this.body.concat(clone.body);
+      this.body.reverse();
       break;
 
     case 'y':
       for(x in clone.body) {
-        clone.body[x].reverse();
-        this.body[x] = this.body[x].concat(clone.body[x]);
+        this.body[x].reverse();
       }
       break;
 
     case 'z':
       for(x in clone.body) {
         for(y in clone.body[x]) {
-          clone.body[x][y].reverse();
-          this.body[x][y] = this.body[x][y].concat(clone.body[x][y]);
+          this.body[x][y].reverse();
         }
       }
       break;
   }
+};
 
+Matrix.prototype.mirror = function(axis, offset) {
+  axis = typeof axis !== 'undefined' ? axis : 'x';
+  offset = typeof offset !== 'undefined' ? offset : 0;
+
+  var clone;
+
+  if(offset > 0) {
+    this.slice(axis, -offset, offset);
+  }
+  
+  clone = this.clone();
+  clone.flip(axis);
+
+  this.extend(axis, clone);
   this.update();
-  console.log('mirrored');
+  // console.log('mirrored');
 };
 
 Matrix.prototype.slice = function(axis, start, howMany) {
@@ -207,6 +218,31 @@ Matrix.prototype.slice = function(axis, start, howMany) {
 
   this.update();
   // console.log('sliced');
+};
+
+Matrix.prototype.extend = function(axis, extension) {
+  var x;
+  var y;
+
+  switch(axis) {
+    case 'x':
+      this.body = this.body.concat(extension.body);
+      break;
+
+    case 'y':
+      for(x in clone.body) {
+        this.body[x] = this.body[x].concat(extension.body[x]);
+      }
+      break;
+
+    case 'z':
+      for(x in clone.body) {
+        for(y in clone.body[x]) {
+          this.body[x][y] = this.body[x][y].concat(extension.body[x][y]);
+        }
+      }
+      break;
+  }
 };
 
 Matrix.prototype.checkPlacement = function(srcMatrix, pos) {
@@ -285,8 +321,10 @@ Matrix.prototype.expand = function(radius) {
   this.update();
 };
 
-Matrix.prototype.transferTo = function(destMatrix, point) {
+Matrix.prototype.transferTo = function(destMatrix, point, force) {
   point = typeof point !== 'undefined' ? point : new Point();
+  force = typeof force !== 'undefined' ? force : false;
+
   var matrix = this;
   var boundaries = matrix.boundaries;
 
@@ -294,10 +332,20 @@ Matrix.prototype.transferTo = function(destMatrix, point) {
     var _x = p.x + x;
     var _y = p.y + y;
     var _z = p.z + z;
-    var cell = m.body[x][y][z];
-    var clone = cell.clone();
+    var _p = new Point(_x, _y, _z);
 
-    destMatrix.body[_x][_y][_z] = clone;
+    if(destMatrix.contains(_p)) {
+      var srcPoint = new Point(x, y, z);
+      var cell = m.val(srcPoint);
+
+      if(
+        force === true ||
+        (force === false && cell.type !== 'void')
+      ) {
+        var clone = cell.clone();
+        destMatrix.val(_p, clone);
+      }
+    }
   }, point);
 
   destMatrix.update();
@@ -324,7 +372,9 @@ Matrix.prototype.update = function() {
   this.reCenter();
 };
 
-Matrix.prototype.clone = function() {
+Matrix.prototype.clone = function(deep) {
+  deep = typeof deep !== 'undefined' ? deep : true;
+
   this.update();
 
   var clone = new Matrix( new Boundaries(
@@ -333,7 +383,7 @@ Matrix.prototype.clone = function() {
     this.boundaries.z
   ));
 
-  this.transferTo(clone);
+  if(deep) this.transferTo(clone);
 
   return clone;
 };
@@ -352,18 +402,6 @@ Matrix.prototype.getVolume = function() {
   }
 
   return volume;
-};
-
-Matrix.prototype.randPos = function(xRange, yRange, zRange) {
-  xRange = typeof xRange !== 'undefined' ? xRange : [0, this.boundaries.x - 1];
-  yRange = typeof yRange !== 'undefined' ? yRange : [0, this.boundaries.y - 1];
-  zRange = typeof zRange !== 'undefined' ? zRange : [0, this.boundaries.z - 1];
-
-  return new Point(
-    Tool.randRange(xRange[0], xRange[1]),
-    Tool.randRange(yRange[0], yRange[1]),
-    Tool.randRange(zRange[0], zRange[1])
-  );
 };
 
 Matrix.prototype.contains = function(pos, excludePaddings) {

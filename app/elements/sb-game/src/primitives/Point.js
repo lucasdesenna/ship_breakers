@@ -133,6 +133,46 @@ Point.prototype.inAxis = function(axis, radius) {
   return inAxis;
 };
 
+Point.prototype.parallelsInAxis = function(axis, distance, length) {
+  distance = typeof distance !== 'undefined' ? distance: 1;
+  length = typeof length !== 'undefined' ? length: 1;
+
+  var splitLength = Math.floor((length - 1) / 2);
+
+  var parallels = [];
+
+  for(var i = this[axis] - splitLength; i <= this[axis] + splitLength; i++) {
+    var p;
+    if(axis === 'x') {
+      p = new Point(i, this.y, this.z);
+      parallels.push(p.up(distance));
+      parallels.push(p.down(distance));
+    } else if(axis === 'y') {
+      p = new Point(this.x, i, this.z);
+      parallels.push(p.right(distance));
+      parallels.push(p.left(distance));
+    }// else if(axis === 'z') { change to make 3D work
+    //   p = new Point(this.x, this.y, i);
+    // }
+  }
+
+  return parallels;
+};
+
+Point.prototype.parallels = function(distance, length) {
+  distance = typeof distance !== 'undefined' ? distance: 1;
+  length = typeof length !== 'undefined' ? length: 1;
+
+  var splitLength = Math.floor((length - 1) / 2);
+
+  var parallels = [];
+
+  parallels = parallels.concat(this.parallelsInAxis('x', distance, length));
+  parallels = parallels.concat(this.parallelsInAxis('y', distance, length));
+
+  return parallels;
+};
+
 Point.prototype.neighborsInAxis = function(axis, radius) {
   radius = typeof radius !== 'undefined' ? radius: 1;
 
@@ -160,7 +200,7 @@ Point.prototype.neighborsInAxis = function(axis, radius) {
   return neighbors;
 };
 
-Point.prototype.neighborsBothAxes = function(radius) {
+Point.prototype.neighbors = function(radius) {
   radius = typeof radius !== 'undefined' ? radius: 1;
 
   var neighborsX = this.neighborsInAxis('x', radius);
@@ -202,4 +242,23 @@ Point.prototype.randRadialPoint = function(minRadius, maxRadius, flat) {
     this.y + Math.sin(angle) * radius,
     this.z + zShift
   );
+};
+
+Point.prototype.dirTo = function(tgtPoint) {
+  var xDelta = Math.abs(this.x - tgtPoint.x);
+  var yDelta = Math.abs(this.y - tgtPoint.y);
+  // var zDelta = Math.abs(this.z - tgtPoint.z);
+  
+  if(xDelta > yDelta) {
+    if(this.x < tgtPoint.x) return 'right';
+    if(this.x > tgtPoint.x) return 'left';
+  } else if(xDelta < yDelta) {
+    if(this.y > tgtPoint.y) return 'up';
+    if(this.y < tgtPoint.y) return 'down';
+  } else {
+    console.error('diagonal alert!');
+    console.log(this);
+    debugger;
+  }
+
 };

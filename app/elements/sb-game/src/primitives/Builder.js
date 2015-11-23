@@ -1,4 +1,4 @@
-function Builder(manager, job, jobCondition, options) {
+function Builder(engineer, job, jobCondition, options) {
   'use strict';
 
   job = typeof job !== 'undefined' ? job : Builder.defaults.job;
@@ -7,23 +7,25 @@ function Builder(manager, job, jobCondition, options) {
   options = typeof options !== 'undefined' ? options : {};
   options.type = typeof options.type !== 'undefined' ? options.type : Builder.defaults.type;
   options.paddings = typeof options.paddings !== 'undefined' ? options.paddings : Builder.defaults.paddings;
-  options.life = typeof options.life !== 'undefined' ? options.life : Builder.defaults.life(manager.tgtMatrix);
+  options.life = typeof options.life !== 'undefined' ? options.life : Builder.defaults.life(engineer.tgtMatrix);
   options.width = typeof options.width !== 'undefined' ? options.width : Builder.defaults.width;
   options.dodgy = typeof options.dodgy !== 'undefined' ? options.dodgy : Builder.defaults.dodgy;
   options.chanceToTurn = typeof options.chanceToTurn !== 'undefined' ? options.chanceToTurn : Builder.defaults.chanceToTurn;
   options.chanceToSpawn = typeof options.chanceToSpawn !== 'undefined' ? options.chanceToSpawn : Builder.defaults.chanceToSpawn;
   
-  this.manager = manager;
-  this.id = manager.buildersCount;
-  this.tgtMatrix = manager.tgtMatrix;
-  this.alive = true;
+  this.engineer = engineer;
+  this.id = engineer.buildersCount;
+  this.tgtMatrix = engineer.tgtMatrix;
+  this.isAlive = true;
   this.options = options;
-  
+
   options.startingPos = typeof options.startingPos !== 'undefined' ? options.startingPos : Builder.defaults.startingPos(this);
+  this.options.startingPos = options.startingPos;
   this.pos = options.startingPos;
 
   options.startingDir = typeof options.startingDir !== 'undefined' ? options.startingDir : Builder.defaults.startingDir(this);
-  this.direction =  options.startingDir;
+  this.options.startingDir = options.startingDir;
+  this.direction = options.startingDir;
 
   this.primaryAxis = '';
   this.secondaryAxis = '';
@@ -41,7 +43,7 @@ Builder.defaults = {
     var tgtMatrix = builder.tgtMatrix;
     var paddings = builder.options.paddings;
 
-    return tgtMatrix.randPos([paddings, tgtMatrix.boundaries.x - paddings - 1], [paddings, tgtMatrix.boundaries.y - paddings - 1], [0, 0]);
+    return Tool.randPos([paddings, tgtMatrix.boundaries.x - paddings - 1], [paddings, tgtMatrix.boundaries.y - paddings - 1], [0, 0]);
   },
   startingDir: function(builder) {
     return Tool.randAttr(['up', 'right', 'down', 'left']);
@@ -86,7 +88,7 @@ Builder.prototype.work = function() {
 };
 
 Builder.prototype.age = function() {
-  if(this.alive) {
+  if(this.isAlive) {
     this.options.life--;
 
     if(this.options.life <= 0) {
@@ -97,7 +99,7 @@ Builder.prototype.age = function() {
 };
 
 Builder.prototype.die = function() {
-  this.alive = false;
+  this.isAlive = false;
 };
 
 Builder.prototype.possibleDirections = function(pos, excludeCurrentAndReverse) {
@@ -134,7 +136,7 @@ Builder.prototype.moveOrTurn = function() {
   var validMove = this.validMove();
   var validDirections = this.validDirections();
 
-  if(this.alive) {
+  if(this.isAlive) {
     if(validMove !== false && validDirections !== false) {
       this.mayDo(this.options.chanceToTurn, function() {
         self.turn(validDirections);
@@ -170,9 +172,9 @@ Builder.prototype.turn = function(validDirections) {
   this.direction = newDirection;
   this.updateAxes();
 
-  this.pos = this.pos[newDirection]();
+  this.pos = this.pos[newDirection](this.options.width);
   this.job(this);
-  this.pos = this.pos[newDirection]();
+  this.pos = this.pos[newDirection](this.options.width);
 };
 
 Builder.prototype.reverseDirection = function(direction) {
@@ -194,14 +196,14 @@ Builder.prototype.spawn = function(type, options) {
   type = typeof type !== 'undefined' ? type : this.type;
   options.startingPos = typeof options.startingPos !== 'undefined' ? options.startingPos : this.pos;
 
-  if(this.alive) {
-    this.manager.addBuilder(type, options);
+  if(this.isAlive) {
+    this.engineer.addBuilder(type, options);
     // console.log('spawned');
   }
 };
 
 Builder.prototype.mayDo = function(chanceToDo, task, otherwise) {
-  if(this.alive && Tool.randPercent() <= chanceToDo) {
+  if(this.isAlive && Tool.randPercent() <= chanceToDo) {
     task();
   } else if(typeof otherwise === 'function') {
     otherwise();

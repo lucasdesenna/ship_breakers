@@ -3,6 +3,8 @@ function Main() {
 }
 
 Main.setup = function() {
+  Main.seed = new Seed();
+  // console.log(Main.seed.val);
   Main.add(new Ship('small', 'transport', 'aaa'));
 };
 
