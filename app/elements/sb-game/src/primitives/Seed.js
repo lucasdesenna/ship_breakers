@@ -23,8 +23,8 @@ Seed.prototype.pick = function() {
   this.val.push(pick);
 
   return pick;
-}
+};
 
 Seed.prototype.reset = function() {
   this.val = Seed.genVal(this.length);
-}
+};

@@ -5,6 +5,7 @@ function Main() {
 Main.setup = function() {
   Main.seed = new Seed();
   // console.log(Main.seed.val);
+  
   Main.add(new Ship('small', 'transport', 'aaa'));
 };
 
@@ -21,13 +22,14 @@ Main.render = function() {
 
   for(var a in renderTree) {
     renderData = [];
-    tgtMatrix = renderTree[a].matrix;
+    tgtMatrix = renderTree[a].matrix.clone();
+    tgtMatrix.toIsometric();
 
-    for (var x = 0; x < tgtMatrix.body.length; x++) {
-      renderData.push([]);
-      for (var y = 0; y < tgtMatrix.body[x].length; y++) {
+    for (var y = 0; y < tgtMatrix.boundaries.y; y++) {
+      renderData[y] = [];
+      for (var x = 0; x < tgtMatrix.boundaries.x; x++) {
         var cell = tgtMatrix.body[x][y][0];
-          renderData[x].push(cell.tile);
+          renderData[y].push(cell.tile);
       }
     }
   }

@@ -47,7 +47,7 @@ Ship.prototype.build = function() {
     sEngineer.clean();
     sEngineer.mirrorShip('x', 0);
 
-    sEngineer.seedConnectors();
+    // sEngineer.seedConnectors();
     sEngineer.assembleHull();
   } else { //DEBUG MODE
     var simmetry = Tool.randAttr(['noSimmetry', 'x', 'y', 'z', 'xy', 'xz', 'yz', 'xyz']); //make dynamic and relative to faction

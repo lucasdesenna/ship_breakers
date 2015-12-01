@@ -19,6 +19,7 @@ var reload = browserSync.reload;
 var merge = require('merge-stream');
 var path = require('path');
 var fs = require('fs');
+var spritesmith = require('gulp.spritesmith');
 var glob = require('glob');
 var historyApiFallback = require('connect-history-api-fallback');
 var packageJson = require('./package.json');
@@ -132,6 +133,17 @@ gulp.task('game', function () {
     .pipe(gulp.dest('app/elements/sb-game/scripts'));
 });
 
+// generate tileset.png and tileset.css
+gulp.task('tileset', function () {
+  var spriteData = gulp.src('app/elements/sb-game/tiles/**/*.{png,jpg}')
+  .pipe(spritesmith({
+    imgName: 'app/elements/sb-game/images/tileset.png',
+    cssName: 'app/elements/sb-game/style/tileset.css',
+    cssTemplate: 'app/elements/sb-game/style/tileset.handlebars'
+  }));
+  return spriteData.pipe(gulp.dest(''));
+});
+
 // Compile and automatically prefix stylesheets
 gulp.task('styles', function () {
   return styleTask('styles', ['**/*.css']);
@@ -187,6 +199,7 @@ gulp.task('copy', function () {
     'app/elements/**/*.html',
     'app/elements/**/*.css',
     'app/elements/**/*.js',
+    'app/elements/**/images/{*.png, *.jpeg, *.jpg}',
     '!app/elements/sb-game/src/**'])
     .pipe(gulp.dest('dist/elements'));
 
@@ -282,7 +295,7 @@ gulp.task('clean', function (cb) {
 });
 
 // Watch files for changes & reload
-gulp.task('serve', ['jade', 'stylus', 'styles', 'game', 'elements', 'images'], function () {
+gulp.task('serve', ['jade', 'tileset', 'stylus', 'styles', 'game', 'elements', 'images'], function () {
   browserSync({
     port: 5000,
     notify: false,
@@ -310,12 +323,13 @@ gulp.task('serve', ['jade', 'stylus', 'styles', 'game', 'elements', 'images'], f
 
   gulp.watch(['app/**/*.jade'], ['jade']);
   gulp.watch(['app/**/*.html'], reload);
-  gulp.watch(['app/styles/**/*.styl'], ['stylus', 'styles', reload]);
-  gulp.watch(['app/styles/**/*.css'], ['styles', reload]);
+  gulp.watch(['app/**/*.styl'], ['stylus']);
+  gulp.watch(['app/**/*.css'], ['styles', reload]);
   gulp.watch(['app/elements/**/*.css'], ['elements', reload]);
   gulp.watch(['app/elements/sb-game/src/**/*.js'], ['game', reload]);
-  gulp.watch(['app/{scripts,elements}/**/{*.js,*.html}', '!app/elements/sb-game/src/**/*.js'], ['jshint', reload]);
-  gulp.watch(['app/images/**/*'], reload);
+  gulp.watch(['app/elements/sb-game/tiles/**/{*.png, *.jpeg, *.jpg}'], ['tileset', 'styles', 'elements', reload]);
+  gulp.watch(['app/{scripts,elements}/**/*{.js, .html}', '!app/elements/sb-game/src/**/*.js'], ['jshint', reload]);
+  gulp.watch(['app/images/**/*{*.png, *.jpeg, *.jpg}'], reload);
 });
 
 // Build and serve the output from the dist build
@@ -345,7 +359,7 @@ gulp.task('serve:dist', ['default'], function () {
 gulp.task('default', ['clean'], function (cb) {
   // Uncomment 'cache-config' after 'rename-index' if you are going to use service workers.
   runSequence(
-    ['jade', 'stylus', 'game'],
+    ['jade', 'tileset', 'stylus', 'game'],
     ['scripts', 'styles', 'images', 'fonts', 'html'],
     'elements',
     'copy',

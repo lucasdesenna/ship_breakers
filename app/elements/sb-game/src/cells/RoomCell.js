@@ -3,7 +3,7 @@ function RoomCell(id, entities) {
 
   entities = typeof entities !== 'undefined' ? entities : {};
   // entities.tile = 'R'; //debug
-  entities.tile = '.';
+  entities.tile = 'floor-c';
 
   Cell.call(this, id, 'room', entities);
 }

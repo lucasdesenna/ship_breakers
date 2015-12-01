@@ -36,14 +36,14 @@ Tunneler.prototype.possibleDirections = (function(_super) {
     }
 
     return pDirections;
-  } 
+  };
 })(Tunneler.prototype.possibleDirections);
 
 Tunneler.prototype.moveOrTurn = (function(_super) {
   return function() {
     _super.call(this);
     this.blockedDirections = [];
-  }
+  };
 })(Tunneler.prototype.moveOrTurn);
 
 Tunneler.genCorridor = function(tunneler) {

@@ -20,7 +20,7 @@ function Cell(id, type, entities) {
 Cell.defaults = {
   id: 'void',
   type: 'void',
-  tile: ' '
+  tile: 'void'
 };
 
 Cell.prototype.clone = function() {

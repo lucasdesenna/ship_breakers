@@ -3,7 +3,7 @@ function Entrance(id, entities) {
   
   entities = typeof entities !== 'undefined' ? entities : {};
   // entities.tile = 'E'; //debug
-  entities.tile = '.';
+  entities.tile = 'floor-c';
 
   Cell.call(this, id, 'entrance', entities);
 }

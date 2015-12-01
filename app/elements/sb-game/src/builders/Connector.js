@@ -36,8 +36,9 @@ Connector.job = function(connector) {
 
 Connector.jobCondition = function(connector, pos, direction) {
   if(this.isAlive) {
+    pos = typeof pos !== 'undefined' ? pos : connector.pos;
+
     var tgtMatrix = connector.tgtMatrix;
-    var pos = connector.pos;
     var cell;
 
     if(tgtMatrix.contains(pos)) {

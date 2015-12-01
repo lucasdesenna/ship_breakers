@@ -4,6 +4,10 @@ function Tool() {
 
 Tool.debugMode = false;
 
+Tool.hypotenuse = function(a, b) {
+  return Math.ceil(Math.sqrt(Math.pow(a, 2) + Math.pow(b, 2)));
+}
+
 Tool.clone = function(object) {
   var clone = {};
 
@@ -189,11 +193,11 @@ Seed.prototype.pick = function() {
   this.val.push(pick);
 
   return pick;
-}
+};
 
 Seed.prototype.reset = function() {
   this.val = Seed.genVal(this.length);
-}
+};
 function Point(x, y, z) {
   'use strict';
   
@@ -453,8 +457,6 @@ Point.prototype.dirTo = function(tgtPoint) {
     if(this.y < tgtPoint.y) return 'down';
   } else {
     console.error('diagonal alert!');
-    console.log(this);
-    debugger;
   }
 
 };
@@ -505,7 +507,7 @@ function Cell(id, type, entities) {
 Cell.defaults = {
   id: 'void',
   type: 'void',
-  tile: ' '
+  tile: 'void'
 };
 
 Cell.prototype.clone = function() {
@@ -526,7 +528,7 @@ function Corridor(id, entities) {
   
   entities = typeof entities !== 'undefined' ? entities : {};
   // entities.tile = 'C'; //debug
-  entities.tile = '.';
+  entities.tile = 'floor-c';
 
   Cell.call(this, id, 'corridor', entities);
 }
@@ -539,7 +541,7 @@ function Entrance(id, entities) {
   
   entities = typeof entities !== 'undefined' ? entities : {};
   // entities.tile = 'E'; //debug
-  entities.tile = '.';
+  entities.tile = 'floor-c';
 
   Cell.call(this, id, 'entrance', entities);
 }
@@ -551,7 +553,7 @@ function Hull(id, entities) {
   'use strict';
   
   entities = typeof entities !== 'undefined' ? entities : {};
-  entities.tile = '#';
+  entities.tile = 'wall-c';
 
   Cell.call(this, id, 'hull', entities);
 }
@@ -564,7 +566,7 @@ function RoomCell(id, entities) {
 
   entities = typeof entities !== 'undefined' ? entities : {};
   // entities.tile = 'R'; //debug
-  entities.tile = '.';
+  entities.tile = 'floor-c';
 
   Cell.call(this, id, 'room', entities);
 }
@@ -688,7 +690,9 @@ Matrix.prototype.flatten = function() {
   this.update();
 };
 
-Matrix.prototype.trim = function() {
+Matrix.prototype.trim = function(isoTrim) {
+  isoTrim = typeof isoTrim !== 'undefined' ? isoTrim : false;
+
   var emptyX = [],
       emptyY = [],
       emptyZ = [];
@@ -708,6 +712,17 @@ Matrix.prototype.trim = function() {
     }
   });
 
+  if(isoTrim === true) {
+    var topTrim = 0;
+    for(var tT in emptyY) {
+      if(emptyY[tT] === true && parseInt(tT) === topTrim) {
+        topTrim++;
+      } else {
+        break;
+      }
+    }
+  }
+
   var clone = this.clone();
 
   for(var x = emptyX.length - 1; x >= 0; x--) {
@@ -715,7 +730,13 @@ Matrix.prototype.trim = function() {
       clone.body.splice(x, 1);
     } else {
       for(var y = emptyY.length - 1; y >= 0; y--) {
-        if(emptyY[y] === true) {
+        if(
+          emptyY[y] === true && (
+            isoTrim === false || 
+            isoTrim === true && 
+            topTrim%2 === 0 || topTrim%2 === 1 && y !== topTrim - 1
+          )
+        ) {
           clone.body[x].splice(y, 1);
         } else {
           for(var z = emptyZ.length - 1; z >= 0; z--) {
@@ -813,25 +834,94 @@ Matrix.prototype.extend = function(axis, extension) {
   var x;
   var y;
 
+  if(typeof extension !== 'object') {
+    extension = typeof extension !== 'undefined' ? extension : 1;
+
+    var boundaries;
+
+    switch(axis) {
+      case 'x':
+        boundaries = new Boundaries(extension, this.boundaries.y, this.boundaries.y);
+        break;
+
+      case 'y':
+        boundaries = new Boundaries(this.boundaries.x, extension, this.boundaries.y);
+        break;
+
+      case 'z':
+        boundaries = new Boundaries(this.boundaries.x, this.boundaries.y, extension);
+        break;
+    }
+    extension = new Matrix(boundaries);
+  }
+
   switch(axis) {
     case 'x':
       this.body = this.body.concat(extension.body);
       break;
 
     case 'y':
-      for(x in clone.body) {
+      for(x in extension.body) {
         this.body[x] = this.body[x].concat(extension.body[x]);
       }
       break;
 
     case 'z':
-      for(x in clone.body) {
-        for(y in clone.body[x]) {
+      for(x in extension.body) {
+        for(y in extension.body[x]) {
           this.body[x][y] = this.body[x][y].concat(extension.body[x][y]);
         }
       }
       break;
   }
+
+  this.update();
+};
+
+Matrix.prototype.toIsometric = function() {
+  //NOT 3D
+
+  var body = this.body;
+  var boundaries = this.boundaries;
+  var _boundaries = new Boundaries(
+    Math.floor((boundaries.x - 1) / 2) + Math.floor(boundaries.y / 2) + 1,
+    boundaries.x + boundaries.y - 1,
+    boundaries.z
+  );
+
+  var clone = new Matrix(_boundaries);
+
+  var xCenter = Math.floor(boundaries.y / 2);
+  var xOffset = 0;
+  var yOffset = 0;
+  var _x;
+  var _y;
+  var pos;
+  var _pos;
+  var cell;
+
+  for(var x in body) {
+    _x = xCenter + xOffset;
+
+    for(var y in body[x]) {
+      pos = new Point(x, y, 0);
+      cell = this.val(pos);
+
+      _y = parseInt(y) + yOffset;
+
+      if(_y%2 === 0) _x--;
+
+      _pos = new Point(_x, _y, 0);
+      clone.val(_pos, cell);
+    }
+    if(parseInt(x)%2 === 1) xOffset++;
+    yOffset++;
+  }
+
+  clone.trim(true);
+
+  this.body = clone.body;
+  this.update();
 };
 
 Matrix.prototype.checkPlacement = function(srcMatrix, pos) {
@@ -1022,6 +1112,7 @@ Matrix.prototype.contains = function(pos, excludePaddings) {
 
   return false;
 };
+
 function Room(id, size, shape) {
   'use strict';
 
@@ -1548,7 +1639,7 @@ Cleaner.prototype.moveOrTurn = function() {
   } else {
     this.die();
   }
-}
+};
 
 function Connector(engineer, options) {
   'use strict';
@@ -1588,8 +1679,9 @@ Connector.job = function(connector) {
 
 Connector.jobCondition = function(connector, pos, direction) {
   if(this.isAlive) {
+    pos = typeof pos !== 'undefined' ? pos : connector.pos;
+
     var tgtMatrix = connector.tgtMatrix;
-    var pos = connector.pos;
     var cell;
 
     if(tgtMatrix.contains(pos)) {
@@ -1778,14 +1870,14 @@ Tunneler.prototype.possibleDirections = (function(_super) {
     }
 
     return pDirections;
-  } 
+  };
 })(Tunneler.prototype.possibleDirections);
 
 Tunneler.prototype.moveOrTurn = (function(_super) {
   return function() {
     _super.call(this);
     this.blockedDirections = [];
-  }
+  };
 })(Tunneler.prototype.moveOrTurn);
 
 Tunneler.genCorridor = function(tunneler) {
@@ -2339,7 +2431,7 @@ Ship.prototype.build = function() {
     sEngineer.clean();
     sEngineer.mirrorShip('x', 0);
 
-    sEngineer.seedConnectors();
+    // sEngineer.seedConnectors();
     sEngineer.assembleHull();
   } else { //DEBUG MODE
     var simmetry = Tool.randAttr(['noSimmetry', 'x', 'y', 'z', 'xy', 'xz', 'yz', 'xyz']); //make dynamic and relative to faction
@@ -2392,6 +2484,7 @@ function Main() {
 Main.setup = function() {
   Main.seed = new Seed();
   // console.log(Main.seed.val);
+  
   Main.add(new Ship('small', 'transport', 'aaa'));
 };
 
@@ -2408,13 +2501,14 @@ Main.render = function() {
 
   for(var a in renderTree) {
     renderData = [];
-    tgtMatrix = renderTree[a].matrix;
+    tgtMatrix = renderTree[a].matrix.clone();
+    tgtMatrix.toIsometric();
 
-    for (var x = 0; x < tgtMatrix.body.length; x++) {
-      renderData.push([]);
-      for (var y = 0; y < tgtMatrix.body[x].length; y++) {
+    for (var y = 0; y < tgtMatrix.boundaries.y; y++) {
+      renderData[y] = [];
+      for (var x = 0; x < tgtMatrix.boundaries.x; x++) {
         var cell = tgtMatrix.body[x][y][0];
-          renderData[x].push(cell.tile);
+          renderData[y].push(cell.tile);
       }
     }
   }

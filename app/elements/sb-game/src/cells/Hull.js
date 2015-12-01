@@ -2,7 +2,7 @@ function Hull(id, entities) {
   'use strict';
   
   entities = typeof entities !== 'undefined' ? entities : {};
-  entities.tile = '#';
+  entities.tile = 'wall-c';
 
   Cell.call(this, id, 'hull', entities);
 }

@@ -84,4 +84,4 @@ Cleaner.prototype.moveOrTurn = function() {
   } else {
     this.die();
   }
-}
+};

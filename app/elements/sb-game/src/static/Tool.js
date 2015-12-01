@@ -4,6 +4,10 @@ function Tool() {
 
 Tool.debugMode = false;
 
+Tool.hypotenuse = function(a, b) {
+  return Math.ceil(Math.sqrt(Math.pow(a, 2) + Math.pow(b, 2)));
+}
+
 Tool.clone = function(object) {
   var clone = {};
 

@@ -3,7 +3,7 @@ function Corridor(id, entities) {
   
   entities = typeof entities !== 'undefined' ? entities : {};
   // entities.tile = 'C'; //debug
-  entities.tile = '.';
+  entities.tile = 'floor-c';
 
   Cell.call(this, id, 'corridor', entities);
 }

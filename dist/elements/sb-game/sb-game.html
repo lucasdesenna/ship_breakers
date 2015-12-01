@@ -1,31 +1,11 @@
-<html><body></body><link rel="import" href="../../bower_components/polymer/polymer.html"/><link href='https://fonts.googleapis.com/css?family=Roboto+Mono:400,500' rel='stylesheet' type='text/css'>  <dom-module id="sb-game"><template><style>:host {
-  position: absolute;
+<html><body></body><link rel="import" href="../../bower_components/polymer/polymer.html"/><link href='https://fonts.googleapis.com/css?family=Roboto+Mono:400,500' rel='stylesheet' type='text/css'> 
+<link href='style/grid.css' rel='stylesheet' type='text/css'>   
+<link href='style/tileset.css' rel='stylesheet' type='text/css'>   <dom-module id="sb-game"><template><style>:host {
   display: block;
   color: white;
   background: black;
-  font-family: 'Roboto Mono';
-  line-height: 1em;
-  white-space: nowrap;
 }
-
-.col {
-  display: inline-block;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.col > .cell {
-  display: block;
-  width: 1em;
-  min-height: 1em;
-  text-align: center;
-  vertical-align: middle;
-  padding: 0;
-  margin: 0;
-  white-space: pre;
-}
-</style><template id="sb-screen" is="dom-repeat" items="{{renderData}}" as="col"><ul class="col"><template is="dom-repeat" items="{{col}}" as="cell"><li class="cell">{{cell}}</li></template></ul></template></template><script>(function() {
+</style><div id="sb-screen" class="grid"><template is="dom-repeat" items="{{renderData}}" as="row"><ul class="row"><template is="dom-repeat" items="{{row}}" as="cell"><li class$="{{getCellClass(cell)}}"></li></template></ul></template></div></template><script>(function() {
   'use strict';
   Polymer({
     is: 'sb-game',
@@ -41,6 +21,10 @@
         notify: true,
         value: []
       }
+    },
+
+    getCellClass: function(tile) {
+      return 'cell tile-' + tile;
     },
 
     setRenderData: function(renderData) {

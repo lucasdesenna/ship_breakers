@@ -99,7 +99,9 @@ Matrix.prototype.flatten = function() {
   this.update();
 };
 
-Matrix.prototype.trim = function() {
+Matrix.prototype.trim = function(isoTrim) {
+  isoTrim = typeof isoTrim !== 'undefined' ? isoTrim : false;
+
   var emptyX = [],
       emptyY = [],
       emptyZ = [];
@@ -119,6 +121,17 @@ Matrix.prototype.trim = function() {
     }
   });
 
+  if(isoTrim === true) {
+    var topTrim = 0;
+    for(var tT in emptyY) {
+      if(emptyY[tT] === true && parseInt(tT) === topTrim) {
+        topTrim++;
+      } else {
+        break;
+      }
+    }
+  }
+
   var clone = this.clone();
 
   for(var x = emptyX.length - 1; x >= 0; x--) {
@@ -126,7 +139,13 @@ Matrix.prototype.trim = function() {
       clone.body.splice(x, 1);
     } else {
       for(var y = emptyY.length - 1; y >= 0; y--) {
-        if(emptyY[y] === true) {
+        if(
+          emptyY[y] === true && (
+            isoTrim === false || 
+            isoTrim === true && 
+            topTrim%2 === 0 || topTrim%2 === 1 && y !== topTrim - 1
+          )
+        ) {
           clone.body[x].splice(y, 1);
         } else {
           for(var z = emptyZ.length - 1; z >= 0; z--) {
@@ -224,25 +243,94 @@ Matrix.prototype.extend = function(axis, extension) {
   var x;
   var y;
 
+  if(typeof extension !== 'object') {
+    extension = typeof extension !== 'undefined' ? extension : 1;
+
+    var boundaries;
+
+    switch(axis) {
+      case 'x':
+        boundaries = new Boundaries(extension, this.boundaries.y, this.boundaries.y);
+        break;
+
+      case 'y':
+        boundaries = new Boundaries(this.boundaries.x, extension, this.boundaries.y);
+        break;
+
+      case 'z':
+        boundaries = new Boundaries(this.boundaries.x, this.boundaries.y, extension);
+        break;
+    }
+    extension = new Matrix(boundaries);
+  }
+
   switch(axis) {
     case 'x':
       this.body = this.body.concat(extension.body);
       break;
 
     case 'y':
-      for(x in clone.body) {
+      for(x in extension.body) {
         this.body[x] = this.body[x].concat(extension.body[x]);
       }
       break;
 
     case 'z':
-      for(x in clone.body) {
-        for(y in clone.body[x]) {
+      for(x in extension.body) {
+        for(y in extension.body[x]) {
           this.body[x][y] = this.body[x][y].concat(extension.body[x][y]);
         }
       }
       break;
   }
+
+  this.update();
+};
+
+Matrix.prototype.toIsometric = function() {
+  //NOT 3D
+
+  var body = this.body;
+  var boundaries = this.boundaries;
+  var _boundaries = new Boundaries(
+    Math.floor((boundaries.x - 1) / 2) + Math.floor(boundaries.y / 2) + 1,
+    boundaries.x + boundaries.y - 1,
+    boundaries.z
+  );
+
+  var clone = new Matrix(_boundaries);
+
+  var xCenter = Math.floor(boundaries.y / 2);
+  var xOffset = 0;
+  var yOffset = 0;
+  var _x;
+  var _y;
+  var pos;
+  var _pos;
+  var cell;
+
+  for(var x in body) {
+    _x = xCenter + xOffset;
+
+    for(var y in body[x]) {
+      pos = new Point(x, y, 0);
+      cell = this.val(pos);
+
+      _y = parseInt(y) + yOffset;
+
+      if(_y%2 === 0) _x--;
+
+      _pos = new Point(_x, _y, 0);
+      clone.val(_pos, cell);
+    }
+    if(parseInt(x)%2 === 1) xOffset++;
+    yOffset++;
+  }
+
+  clone.trim(true);
+
+  this.body = clone.body;
+  this.update();
 };
 
 Matrix.prototype.checkPlacement = function(srcMatrix, pos) {

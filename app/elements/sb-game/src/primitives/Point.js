@@ -257,8 +257,6 @@ Point.prototype.dirTo = function(tgtPoint) {
     if(this.y < tgtPoint.y) return 'down';
   } else {
     console.error('diagonal alert!');
-    console.log(this);
-    debugger;
   }
 
 };
