@@ -185,23 +185,24 @@ ShipEngineer.prototype.seedConnectors = function() {
   var id;
   var boundaries;
   var pos;
-  var cPos;
+  var cPos = function(pos, boundaries) {
+    return Tool.randPos(
+      [pos.x, pos.x + boundaries.x - 1],
+      [pos.y, pos.y + boundaries.y - 1],
+      [pos.z, pos.z + boundaries.z - 1]
+    );
+  };
   var cCount;
 
   for(var r in rooms) {
     roomLog = rooms[r];
     boundaries = roomLog.room.matrix.boundaries;
     pos = roomLog.pos;
-    cPos = Tool.randPos(
-      [pos.x, pos.x + boundaries.x - 1],
-      [pos.y, pos.y + boundaries.y - 1],
-      [pos.z, pos.z + boundaries.z - 1]
-    );
 
     cCount = Ship.gen.params.connectorsPerRoom();
 
     for(cCount; cCount > 0; cCount--) {
-      this.addConnector({startingPos: cPos, originId: roomLog.id});
+      this.addConnector({startingPos: cPos(pos, boundaries), originId: roomLog.id});
     }
   }
 

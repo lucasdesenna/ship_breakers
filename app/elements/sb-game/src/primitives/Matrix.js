@@ -101,6 +101,7 @@ Matrix.prototype.flatten = function() {
 
 Matrix.prototype.trim = function(isoTrim) {
   isoTrim = typeof isoTrim !== 'undefined' ? isoTrim : false;
+  var topTrim;
 
   var emptyX = [],
       emptyY = [],
@@ -122,7 +123,7 @@ Matrix.prototype.trim = function(isoTrim) {
   });
 
   if(isoTrim === true) {
-    var topTrim = 0;
+    topTrim = 0;
     for(var tT in emptyY) {
       if(emptyY[tT] === true && parseInt(tT) === topTrim) {
         topTrim++;
@@ -520,4 +521,14 @@ Matrix.prototype.contains = function(pos, excludePaddings) {
   }
 
   return false;
+};
+
+Matrix.prototype.mark = function(pos) {
+  if(this.contains(pos) === true) {
+    console.log(this.val(pos));
+    var mark = new Cell('m', 'mark', {tile: 'mark'});
+    this.val(pos, mark);
+  } else {
+    return undefined;
+  }
 };

@@ -126,10 +126,14 @@ Tunneler.jobCondition = function(tunneler, pos, direction) {
     }
   }
 
-  cell = tgtMatrix.val(pos[direction]());
+  if(tunneler.tgtMatrix.contains(pos[direction]())) {
+    cell = tgtMatrix.val(pos[direction]());
 
-  if(cell.type !== 'void' && cell.type !== 'corridor') {
-    // console.log('front invalid');
+    if(cell.type !== 'void' && cell.type !== 'corridor') {
+      // console.log('front invalid');
+      return false;
+    }
+  } else {
     return false;
   }
 

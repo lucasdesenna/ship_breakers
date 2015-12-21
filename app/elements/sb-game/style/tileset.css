@@ -5,17 +5,31 @@
   width: 32px;
   height: 32px;
 }
-.tile-void {
+.tile-mark {
   display: block;
   background-image: url(../images/tileset.png);
   background-position: -32px 0px;
   width: 32px;
   height: 32px;
 }
-.tile-wall-c {
+.tile-void {
   display: block;
   background-image: url(../images/tileset.png);
   background-position: 0px -32px;
+  width: 32px;
+  height: 32px;
+}
+.tile-wall-c {
+  display: block;
+  background-image: url(../images/tileset.png);
+  background-position: -32px -32px;
+  width: 32px;
+  height: 32px;
+}
+.tile-wall-d {
+  display: block;
+  background-image: url(../images/tileset.png);
+  background-position: -64px 0px;
   width: 32px;
   height: 32px;
 }

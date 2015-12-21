@@ -20,9 +20,9 @@ Main.render = function() {
   var tgtMatrix;
   var renderData;
 
-  for(var a in renderTree) {
+  for(var r in renderTree) {
     renderData = [];
-    tgtMatrix = renderTree[a].matrix.clone();
+    tgtMatrix = renderTree[r].matrix.clone();
     tgtMatrix.toIsometric();
 
     for (var y = 0; y < tgtMatrix.boundaries.y; y++) {

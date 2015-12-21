@@ -6,6 +6,7 @@ function Connector(engineer, options) {
   options.life = typeof options.life !== 'undefined' ? options.life : Connector.defaults.life;
   options.width = typeof options.width !== 'undefined' ? options.width : Connector.defaults.width;
   options.startingDir = typeof options.startingDir !== 'undefined' ? options.startingDir : Connector.defaults.startingDir();
+  options.chanceToTurn = 0;
   options.chanceToSpawn = 0;
 
   Builder.call(this, engineer, Connector.job, Connector.jobCondition, options);
@@ -28,31 +29,43 @@ Connector.prototype = Object.create(Builder.prototype);
 Connector.prototype.constructor = Connector;
 
 Connector.job = function(connector) {
-  var tgtMatrix = connector.tgtMatrix;
   var pos = connector.pos;
 
   connector.path.push(pos);
+
+  var direction = connector.direction;
+  var nextPos = pos[direction]();
+  var tgtMatrix = connector.tgtMatrix;
+  var cell = tgtMatrix.val(nextPos);
+
+  if(cell.type === 'room' && cell.id !== connector.originId) {
+    connector.isConnected = true;
+    connector.die();
+  }
 };
 
 Connector.jobCondition = function(connector, pos, direction) {
-  if(this.isAlive) {
-    pos = typeof pos !== 'undefined' ? pos : connector.pos;
+  var tgtMatrix = connector.tgtMatrix;
 
-    var tgtMatrix = connector.tgtMatrix;
-    var cell;
+  var sAxis = Tool.dirToAxis(direction);
+  var poses = pos.parallelsInAxis(sAxis);
+  poses.push(pos);
 
-    if(tgtMatrix.contains(pos)) {
-      cell = tgtMatrix.val(pos);
+  var cell;
 
-      if(cell.type === 'void' || cell.type === 'room' && cell.id === this.originId) {
-        return true;
-      } else if(cell.type === 'room' && cell.id !== this.originId) {
-        this.isConnected = true;
+  for(var p in poses) {
+    if(tgtMatrix.contains(poses[p])) {
+      cell = tgtMatrix.val(poses[p]);
+
+      if(cell.type !== 'void' && cell.type !== 'room') {
+        return false;
       }
+    } else {
+      return false;
     }
   }
-  
-  return false;
+
+  return true;
 };
 
 Connector.prototype.die = (function(_super) {
@@ -69,10 +82,11 @@ Connector.prototype.die = (function(_super) {
         cell = tgtMatrix.val(pos);
 
         if(cell.type === 'void') {
-          corridor.transferTo(tgtMatrix, pos.toTopLeft(corridor));
+          corridor.transferTo(tgtMatrix, pos);
         }
       }
     }
+
     _super.call(this);
   };
-})(Connector.prototype.die);
+})(Builder.prototype.die);
