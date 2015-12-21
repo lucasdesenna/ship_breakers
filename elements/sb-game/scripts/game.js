@@ -6,7 +6,7 @@ Tool.debugMode = false;
 
 Tool.hypotenuse = function(a, b) {
   return Math.ceil(Math.sqrt(Math.pow(a, 2) + Math.pow(b, 2)));
-}
+};
 
 Tool.clone = function(object) {
   var clone = {};
@@ -692,6 +692,7 @@ Matrix.prototype.flatten = function() {
 
 Matrix.prototype.trim = function(isoTrim) {
   isoTrim = typeof isoTrim !== 'undefined' ? isoTrim : false;
+  var topTrim;
 
   var emptyX = [],
       emptyY = [],
@@ -713,7 +714,7 @@ Matrix.prototype.trim = function(isoTrim) {
   });
 
   if(isoTrim === true) {
-    var topTrim = 0;
+    topTrim = 0;
     for(var tT in emptyY) {
       if(emptyY[tT] === true && parseInt(tT) === topTrim) {
         topTrim++;
@@ -1111,6 +1112,16 @@ Matrix.prototype.contains = function(pos, excludePaddings) {
   }
 
   return false;
+};
+
+Matrix.prototype.mark = function(pos) {
+  if(this.contains(pos) === true) {
+    console.log(this.val(pos));
+    var mark = new Cell('m', 'mark', {tile: 'mark'});
+    this.val(pos, mark);
+  } else {
+    return undefined;
+  }
 };
 
 function Room(id, size, shape) {
@@ -1649,6 +1660,7 @@ function Connector(engineer, options) {
   options.life = typeof options.life !== 'undefined' ? options.life : Connector.defaults.life;
   options.width = typeof options.width !== 'undefined' ? options.width : Connector.defaults.width;
   options.startingDir = typeof options.startingDir !== 'undefined' ? options.startingDir : Connector.defaults.startingDir();
+  options.chanceToTurn = 0;
   options.chanceToSpawn = 0;
 
   Builder.call(this, engineer, Connector.job, Connector.jobCondition, options);
@@ -1671,31 +1683,43 @@ Connector.prototype = Object.create(Builder.prototype);
 Connector.prototype.constructor = Connector;
 
 Connector.job = function(connector) {
-  var tgtMatrix = connector.tgtMatrix;
   var pos = connector.pos;
 
   connector.path.push(pos);
+
+  var direction = connector.direction;
+  var nextPos = pos[direction]();
+  var tgtMatrix = connector.tgtMatrix;
+  var cell = tgtMatrix.val(nextPos);
+
+  if(cell.type === 'room' && cell.id !== connector.originId) {
+    connector.isConnected = true;
+    connector.die();
+  }
 };
 
 Connector.jobCondition = function(connector, pos, direction) {
-  if(this.isAlive) {
-    pos = typeof pos !== 'undefined' ? pos : connector.pos;
+  var tgtMatrix = connector.tgtMatrix;
 
-    var tgtMatrix = connector.tgtMatrix;
-    var cell;
+  var sAxis = Tool.dirToAxis(direction);
+  var poses = pos.parallelsInAxis(sAxis);
+  poses.push(pos);
 
-    if(tgtMatrix.contains(pos)) {
-      cell = tgtMatrix.val(pos);
+  var cell;
 
-      if(cell.type === 'void' || cell.type === 'room' && cell.id === this.originId) {
-        return true;
-      } else if(cell.type === 'room' && cell.id !== this.originId) {
-        this.isConnected = true;
+  for(var p in poses) {
+    if(tgtMatrix.contains(poses[p])) {
+      cell = tgtMatrix.val(poses[p]);
+
+      if(cell.type !== 'void' && cell.type !== 'room') {
+        return false;
       }
+    } else {
+      return false;
     }
   }
-  
-  return false;
+
+  return true;
 };
 
 Connector.prototype.die = (function(_super) {
@@ -1712,13 +1736,14 @@ Connector.prototype.die = (function(_super) {
         cell = tgtMatrix.val(pos);
 
         if(cell.type === 'void') {
-          corridor.transferTo(tgtMatrix, pos.toTopLeft(corridor));
+          corridor.transferTo(tgtMatrix, pos);
         }
       }
     }
+
     _super.call(this);
   };
-})(Connector.prototype.die);
+})(Builder.prototype.die);
 
 function Roomer(engineer, options) {
   'use strict';
@@ -1960,10 +1985,14 @@ Tunneler.jobCondition = function(tunneler, pos, direction) {
     }
   }
 
-  cell = tgtMatrix.val(pos[direction]());
+  if(tunneler.tgtMatrix.contains(pos[direction]())) {
+    cell = tgtMatrix.val(pos[direction]());
 
-  if(cell.type !== 'void' && cell.type !== 'corridor') {
-    // console.log('front invalid');
+    if(cell.type !== 'void' && cell.type !== 'corridor') {
+      // console.log('front invalid');
+      return false;
+    }
+  } else {
     return false;
   }
 
@@ -2170,23 +2199,24 @@ ShipEngineer.prototype.seedConnectors = function() {
   var id;
   var boundaries;
   var pos;
-  var cPos;
+  var cPos = function(pos, boundaries) {
+    return Tool.randPos(
+      [pos.x, pos.x + boundaries.x - 1],
+      [pos.y, pos.y + boundaries.y - 1],
+      [pos.z, pos.z + boundaries.z - 1]
+    );
+  };
   var cCount;
 
   for(var r in rooms) {
     roomLog = rooms[r];
     boundaries = roomLog.room.matrix.boundaries;
     pos = roomLog.pos;
-    cPos = Tool.randPos(
-      [pos.x, pos.x + boundaries.x - 1],
-      [pos.y, pos.y + boundaries.y - 1],
-      [pos.z, pos.z + boundaries.z - 1]
-    );
 
     cCount = Ship.gen.params.connectorsPerRoom();
 
     for(cCount; cCount > 0; cCount--) {
-      this.addConnector({startingPos: cPos, originId: roomLog.id});
+      this.addConnector({startingPos: cPos(pos, boundaries), originId: roomLog.id});
     }
   }
 
@@ -2424,14 +2454,13 @@ Ship.prototype.build = function() {
 
   if(Tool.debugMode !== true) {
     do {
-      Main.seed.reset();
       sEngineer.seedShip();
     } while(sEngineer.blueprints.length > 0);
 
     sEngineer.clean();
     sEngineer.mirrorShip('x', 0);
 
-    // sEngineer.seedConnectors();
+    sEngineer.seedConnectors();
     sEngineer.assembleHull();
   } else { //DEBUG MODE
     var simmetry = Tool.randAttr(['noSimmetry', 'x', 'y', 'z', 'xy', 'xz', 'yz', 'xyz']); //make dynamic and relative to faction
@@ -2499,9 +2528,9 @@ Main.render = function() {
   var tgtMatrix;
   var renderData;
 
-  for(var a in renderTree) {
+  for(var r in renderTree) {
     renderData = [];
-    tgtMatrix = renderTree[a].matrix.clone();
+    tgtMatrix = renderTree[r].matrix.clone();
     tgtMatrix.toIsometric();
 
     for (var y = 0; y < tgtMatrix.boundaries.y; y++) {
