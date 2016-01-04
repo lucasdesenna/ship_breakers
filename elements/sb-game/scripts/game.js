@@ -485,109 +485,149 @@ Boundaries.prototype.update = function(x, y, z) {
   return this;
 };
 
-function Cell(id, type, entities) {
+function Cell(id, type, layers) {
   'use strict';
 
   id = typeof id !== 'undefined' ? id : Cell.defaults.id;
   type = typeof type !== 'undefined' ? type : Cell.defaults.type;
-  entities = typeof entities !== 'undefined' ? entities : {};
-  entities.tile = typeof entities.tile !== 'undefined' ? entities.tile : Cell.defaults.tile;
-  entities.itens = typeof entities.itens !== 'undefined' ? entities.itens : [];
-  entities.furniture = typeof entities.furniture !== 'undefined' ? entities.furniture : [];
-  entities.characters = typeof entities.characters !== 'undefined' ? entities.characters : [];
+  layers = typeof layers !== 'undefined' ? layers : {};
+  layers.tile = typeof layers.tile !== 'undefined' ? layers.tile : Cell.defaults.tile;
+  layers.furniture = typeof layers.furniture !== 'undefined' ? layers.furniture : Cell.defaults.furniture;
+  layers.itens = typeof layers.itens !== 'undefined' ? layers.itens : Cell.defaults.itens;
 
   this.id = id;
   this.type = type;
-  this.tile = entities.tile;
-  this.itens = entities.itens;
-  this.furniture = entities.furniture;
-  this.characters = entities.characters;
+  this.layers = layers;
+  
+  this.gfx = [];
+  this.updateGfx();
 }
 
 Cell.defaults = {
   id: 'void',
   type: 'void',
-  tile: 'void'
+  tile: 'void',
+  furniture: undefined,
+  itens: []
 };
 
-Cell.prototype.clone = function() {
-  var entities = {
-    tile: this.tile,
-    itens: this.itens,
-    furniture: this.furniture,
-    characters: this.characters
+Cell.prototype.updateGfx = function() {
+  var layers = this.layers;
+  var tile = layers.tile;
+  var furniture = layers.furniture;
+  var itens = layers.itens;
+
+  var gfx = [];
+
+  gfx.push(tile);
+
+  if(typeof furniture !== 'undefined') gfx.push(furniture.gfx);
+
+  if(itens.length > 0) {
+    for(var i in itens) {
+      gfx.push(itens[i].gfx);
+    }
+  }
+
+  this.gfx = gfx;
+};
+
+Cell.prototype.clone = function(constructor) {
+  constructor = typeof constructor !== 'undefined' ? constructor : Cell;
+
+  var id = this.id;
+  var type = this.type;
+  var layers = {
+    tile: this.layers.tile,
+    furniture: this.layers.furniture,
+    itens: this.layers.itens,
   };
 
-  var clone = new Cell(this.id, this.type, entities);
+  var clone;
+
+  if(constructor !== Cell) {
+    clone = new constructor(id, layers);
+  } else {
+    clone = new constructor(id, type, layers);
+  }
 
   return clone;
 };
 
-function Corridor(id, entities) {
+function Corridor(id, layers) {
   'use strict';
   
-  entities = typeof entities !== 'undefined' ? entities : {};
-  // entities.tile = 'C'; //debug
-  entities.tile = 'floor-c';
+  layers = typeof layers !== 'undefined' ? layers : {};
+  // layers.tile = 'C'; //debug
+  layers.tile = 'floor-c';
 
-  Cell.call(this, id, 'corridor', entities);
+  Cell.call(this, id, 'corridor', layers);
 }
 
 Corridor.prototype = Object.create(Cell.prototype);
 Corridor.prototype.constructor = Corridor;
 
-function Entrance(id, entities) {
+Corridor.prototype.clone = (function(_super) {
+  return function() {
+    return _super.call(this, Corridor);
+  };
+})(Cell.prototype.clone);
+
+function Entrance(id, layers) {
   'use strict';
   
-  entities = typeof entities !== 'undefined' ? entities : {};
-  // entities.tile = 'E'; //debug
-  entities.tile = 'floor-c';
+  layers = typeof layers !== 'undefined' ? layers : {};
+  layers.tile = 'floor-c';
+  layers.furniture = new Door();
 
-  Cell.call(this, id, 'entrance', entities);
+  Cell.call(this, id, 'entrance', layers);
 }
 
 Entrance.prototype = Object.create(Cell.prototype);
 Entrance.prototype.constructor = Entrance;
 
-function Hull(id, entities) {
+Entrance.prototype.clone = (function(_super) {
+  return function() {
+    return _super.call(this, Entrance);
+  };
+})(Cell.prototype.clone);
+
+function Hull(id, layers) {
   'use strict';
   
-  entities = typeof entities !== 'undefined' ? entities : {};
-  entities.tile = 'wall-c';
+  layers = typeof layers !== 'undefined' ? layers : {};
+  layers.tile = 'wall-c';
 
-  Cell.call(this, id, 'hull', entities);
+  Cell.call(this, id, 'hull', layers);
 }
 
 Hull.prototype = Object.create(Cell.prototype);
 Hull.prototype.constructor = Hull;
 
-function RoomCell(id, entities) {
+Hull.prototype.clone = (function(_super) {
+  return function() {
+    return _super.call(this, Hull);
+  };
+})(Cell.prototype.clone);
+
+function RoomCell(id, layers) {
   'use strict';
 
-  entities = typeof entities !== 'undefined' ? entities : {};
-  // entities.tile = 'R'; //debug
-  entities.tile = 'floor-c';
+  layers = typeof layers !== 'undefined' ? layers : {};
+  // layers.tile = 'R'; //debug
+  layers.tile = 'floor-c';
 
-  Cell.call(this, id, 'room', entities);
+  Cell.call(this, id, 'room', layers);
 }
 
 RoomCell.prototype = Object.create(Cell.prototype);
 RoomCell.prototype.constructor = RoomCell;
 
-RoomCell.prototype.clone = function() {
-  var constructor = this.constructor;
-
-  var entities = {
-    tile: this.tile,
-    itens: this.itens,
-    furniture: this.furniture,
-    characters: this.characters
+RoomCell.prototype.clone = (function(_super) {
+  return function() {
+    return _super.call(this, RoomCell);
   };
-
-  var clone = new RoomCell(this.id, entities);
-
-  return clone;
-};
+})(Cell.prototype.clone);
 
 function Matrix(boundaries, paddings) {
   'use strict';
@@ -1564,6 +1604,52 @@ Builder.prototype.checkPos = function(pos, direction) {
   return false;
 };
 
+function Furniture(type, gfx, itens) {
+  type = typeof type !== 'undefined' ? type : Furniture.defaults.type;
+  gfx = typeof gfx !== 'undefined' ? gfx : Furniture.defaults.gfx;
+  itens = typeof itens !== 'undefined' ? itens : Furniture.defaults.itens;
+
+  this.type = type;
+  this.gfx = gfx;
+}
+
+Furniture.defaults = {
+  type: 'generic-furniture',
+  gfx: 'placeholder-furniture',
+  itens: []
+};
+function Door(orientation) {  
+  var gfx;
+
+  switch(orientation) {
+    case 'nEast-sWest':
+      gfx = 'door-ne-sw';
+
+    case 'nEast-sWest':
+      gfx = 'door-nw-se';
+
+    default:
+      gfx = 'door-ne-sw';
+  }
+
+  Furniture.call(this, 'door', gfx);
+}
+
+Door.prototype = Object.create(Furniture.prototype);
+Door.prototype.constructor = Door;
+
+function Item(type, gfx) {
+  type = typeof type !== 'undefined' ? type : Item.defaults.type;
+  gfx = typeof gfx !== 'undefined' ? gfx : Item.defaults.gfx;
+
+  this.type = type;
+  this.gfx = gfx;
+}
+
+Item.defaults = {
+  type: 'generic-item',
+  gfx: 'placeholder-furniture',
+};
 function Cleaner(engineer, options) {
   'use strict';
 
@@ -2528,16 +2614,18 @@ Main.render = function() {
   var tgtMatrix;
   var renderData;
 
-  for(var r in renderTree) {
+  for(var agent in renderTree) {
     renderData = [];
-    tgtMatrix = renderTree[r].matrix.clone();
+    tgtMatrix = renderTree[agent].matrix.clone();
     tgtMatrix.toIsometric();
 
     for (var y = 0; y < tgtMatrix.boundaries.y; y++) {
       renderData[y] = [];
+
       for (var x = 0; x < tgtMatrix.boundaries.x; x++) {
         var cell = tgtMatrix.body[x][y][0];
-          renderData[y].push(cell.tile);
+        
+        renderData[y].push(cell.gfx);
       }
     }
   }
