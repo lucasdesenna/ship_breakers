@@ -1,12 +1,18 @@
-function Entrance(id, entities) {
+function Entrance(id, layers) {
   'use strict';
   
-  entities = typeof entities !== 'undefined' ? entities : {};
-  // entities.tile = 'E'; //debug
-  entities.tile = 'floor-c';
+  layers = typeof layers !== 'undefined' ? layers : {};
+  layers.tile = 'floor-c';
+  layers.furniture = new Door();
 
-  Cell.call(this, id, 'entrance', entities);
+  Cell.call(this, id, 'entrance', layers);
 }
 
 Entrance.prototype = Object.create(Cell.prototype);
 Entrance.prototype.constructor = Entrance;
+
+Entrance.prototype.clone = (function(_super) {
+  return function() {
+    return _super.call(this, Entrance);
+  };
+})(Cell.prototype.clone);

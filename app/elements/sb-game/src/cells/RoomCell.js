@@ -1,27 +1,18 @@
-function RoomCell(id, entities) {
+function RoomCell(id, layers) {
   'use strict';
 
-  entities = typeof entities !== 'undefined' ? entities : {};
-  // entities.tile = 'R'; //debug
-  entities.tile = 'floor-c';
+  layers = typeof layers !== 'undefined' ? layers : {};
+  // layers.tile = 'R'; //debug
+  layers.tile = 'floor-c';
 
-  Cell.call(this, id, 'room', entities);
+  Cell.call(this, id, 'room', layers);
 }
 
 RoomCell.prototype = Object.create(Cell.prototype);
 RoomCell.prototype.constructor = RoomCell;
 
-RoomCell.prototype.clone = function() {
-  var constructor = this.constructor;
-
-  var entities = {
-    tile: this.tile,
-    itens: this.itens,
-    furniture: this.furniture,
-    characters: this.characters
+RoomCell.prototype.clone = (function(_super) {
+  return function() {
+    return _super.call(this, RoomCell);
   };
-
-  var clone = new RoomCell(this.id, entities);
-
-  return clone;
-};
+})(Cell.prototype.clone);

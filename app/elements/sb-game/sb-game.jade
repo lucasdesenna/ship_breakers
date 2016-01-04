@@ -23,9 +23,11 @@ html
 
       div#sb-screen.grid
         template(is='dom-repeat', items='{{renderData}}', as='row')
-          ul.row
+          div.row
             template(is='dom-repeat', items='{{row}}', as='cell')
-              li(class$='{{getCellClass(cell)}}')
+              div.cell
+                template(is='dom-repeat', items='{{cell}}', as='layer')
+                  div(class$='{{getLayerClass(layer)}}')
     
     script.
       (function() {
@@ -46,8 +48,8 @@ html
             }
           },
 
-          getCellClass: function(tile) {
-            return 'cell tile-' + tile;
+          getLayerClass: function(tile) {
+            return 'layer tile-' + tile;
           },
 
           setRenderData: function(renderData) {

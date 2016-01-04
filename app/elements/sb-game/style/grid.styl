@@ -8,16 +8,6 @@ clearfix()
   &:after
     clear both
 
-row-offset()
-  for row in (2..100)
-    &:nth-child({row})
-      top: -(row - 1) * 26px
-
-cell-offset()
-  for row in (2..100)
-    &:nth-child({cell})
-      top: -(cell - 1) * 8px
-
 .grid
   position: absolute
   display: block
@@ -51,3 +41,13 @@ cell-offset()
       vertical-align: middle
       padding: 0
       white-space: pre
+
+      & > .layer
+        position: absolute
+        display: block
+        min-width: 2em
+        min-height: 2em
+        text-align: center
+        vertical-align: middle
+        padding: 0
+        white-space: pre

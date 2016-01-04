@@ -5,7 +5,7 @@
   color: white;
   background: black;
 }
-</style><div id="sb-screen" class="grid"><template is="dom-repeat" items="{{renderData}}" as="row"><ul class="row"><template is="dom-repeat" items="{{row}}" as="cell"><li class$="{{getCellClass(cell)}}"></li></template></ul></template></div></template><script>(function() {
+</style><div id="sb-screen" class="grid"><template is="dom-repeat" items="{{renderData}}" as="row"><div class="row"><template is="dom-repeat" items="{{row}}" as="cell"><div class="cell"><template is="dom-repeat" items="{{cell}}" as="layer"><div class$="{{getLayerClass(layer)}}"></div></template></div></template></div></template></div></template><script>(function() {
   'use strict';
   Polymer({
     is: 'sb-game',
@@ -23,8 +23,8 @@
       }
     },
 
-    getCellClass: function(tile) {
-      return 'cell tile-' + tile;
+    getLayerClass: function(tile) {
+      return 'layer tile-' + tile;
     },
 
     setRenderData: function(renderData) {

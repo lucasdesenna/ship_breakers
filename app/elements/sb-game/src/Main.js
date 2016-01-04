@@ -20,16 +20,18 @@ Main.render = function() {
   var tgtMatrix;
   var renderData;
 
-  for(var r in renderTree) {
+  for(var agent in renderTree) {
     renderData = [];
-    tgtMatrix = renderTree[r].matrix.clone();
+    tgtMatrix = renderTree[agent].matrix.clone();
     tgtMatrix.toIsometric();
 
     for (var y = 0; y < tgtMatrix.boundaries.y; y++) {
       renderData[y] = [];
+
       for (var x = 0; x < tgtMatrix.boundaries.x; x++) {
         var cell = tgtMatrix.body[x][y][0];
-          renderData[y].push(cell.tile);
+        
+        renderData[y].push(cell.gfx);
       }
     }
   }
