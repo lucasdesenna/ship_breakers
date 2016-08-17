@@ -2,8 +2,6 @@ function Tool() {
   'use strict';
 }
 
-Tool.debugMode = false;
-
 Tool.hypotenuse = function(a, b) {
   return Math.ceil(Math.sqrt(Math.pow(a, 2) + Math.pow(b, 2)));
 };
@@ -205,9 +203,9 @@ function Point(x, y, z) {
   y = typeof y !== 'undefined' ? y : 0;
   z = typeof z !== 'undefined' ? z : 0;
 
-  this.x = x;
-  this.y = y;
-  this.z = z;
+  this.x = parseInt(x);
+  this.y = parseInt(y);
+  this.z = parseInt(z);
 }
 
 Point.prototype.distanceTo = function(point) {
@@ -263,53 +261,57 @@ Point.prototype.flatten = function() {
 
 Point.prototype.up = function(steps) {
   steps = typeof steps !== 'undefined' ? steps : 1;
+  var _y = this.y - steps;
 
-  return new Point(this.x, this.y - steps, this.z);
+  return new Point(this.x, _y, this.z);
 };
 
 Point.prototype.right = function(steps) {
   steps = typeof steps !== 'undefined' ? steps : 1;
+  var _x = this.x + steps;
 
-  return new Point(this.x + steps, this.y, this.z);
+  return new Point(_x, this.y, this.z);
 };
 
 Point.prototype.down = function(steps) {
   steps = typeof steps !== 'undefined' ? steps : 1;
+  var _y = this.y + steps;
 
-  return new Point(this.x, this.y + steps, this.z);
+  return new Point(this.x, _y, this.z);
 };
 
 Point.prototype.left = function(steps) {
   steps = typeof steps !== 'undefined' ? steps : 1;
+  var _x = this.x - steps;
 
-  return new Point(this.x - steps, this.y, this.z);
+  return new Point(_x, this.y, this.z);
 };
 
-Point.prototype.neighbors = function(radius, flat) {
-  radius = typeof radius !== 'undefined' ? radius: 1;
-  flat = typeof flat !== 'undefined' ? flat : true;
-  excludeSelf = typeof excludeSelf !== 'undefined' ? excludeSelf: false;
+// Point.prototype.neighbors = function(radius, flat) {
+//   radius = typeof radius !== 'undefined' ? radius: 1;
+//   flat = typeof flat !== 'undefined' ? flat : true;
+//   excludeSelf = typeof excludeSelf !== 'undefined' ? excludeSelf: false;
 
-  var neighbors = [];
+//   var neighbors = [];
   
-  for(var _x = this.x - radius; _x <= this.x + radius; _x++) {
-    for(var _y = this.y - radius; _y <= this.y + radius; _y++) {
-      if(flat === false) {
-        for(var _z = this.z - radius; _z <= this.y + radius; _z++) {
-          if(this.x !== _x || this.y !== _y || this.z !== _z) {
-            neighbors.push(new Point(_x, _y, _z));
-          }
-        }
-      } else {
-        if(this.x !== _x || this.y !== _y) {
-          neighbors.push(new Point(_x, _y, this.z));
-        }
-      }
-    }
-  }
+//   for(var _x = this.x - radius; _x <= this.x + radius; _x++) {
+//     for(var _y = this.y - radius; _y <= this.y + radius; _y++) {
+//       if(flat === false) {
+//         for(var _z = this.z - radius; _z <= this.y + radius; _z++) {
+//           if(this.x !== _x || this.y !== _y || this.z !== _z) {
+//             neighbors.push(new Point(_x, _y, _z));
+//           }
+//         }
+//       } else {
+//         if(this.x !== _x || this.y !== _y) {
+//           neighbors.push(new Point(_x, _y, this.z));
+//         }
+//       }
+//     }
+//   }
 
-  return neighbors;
-};
+//   return neighbors;
+// };
 
 
 Point.prototype.inAxis = function(axis, radius) {
@@ -485,18 +487,18 @@ Boundaries.prototype.update = function(x, y, z) {
   return this;
 };
 
-function Cell(id, type, layers) {
+function Cell(type, tag, layers) {
   'use strict';
 
-  id = typeof id !== 'undefined' ? id : Cell.defaults.id;
   type = typeof type !== 'undefined' ? type : Cell.defaults.type;
+  tag = typeof tag !== 'undefined' ? tag : Cell.defaults.tag;
   layers = typeof layers !== 'undefined' ? layers : {};
   layers.tile = typeof layers.tile !== 'undefined' ? layers.tile : Cell.defaults.tile;
   layers.furniture = typeof layers.furniture !== 'undefined' ? layers.furniture : Cell.defaults.furniture;
   layers.itens = typeof layers.itens !== 'undefined' ? layers.itens : Cell.defaults.itens;
 
-  this.id = id;
   this.type = type;
+  this.tag = tag;
   this.layers = layers;
   
   this.gfx = [];
@@ -504,8 +506,8 @@ function Cell(id, type, layers) {
 }
 
 Cell.defaults = {
-  id: 'void',
   type: 'void',
+  tag: 'void',
   tile: 'void',
   furniture: undefined,
   itens: []
@@ -535,7 +537,7 @@ Cell.prototype.updateGfx = function() {
 Cell.prototype.clone = function(constructor) {
   constructor = typeof constructor !== 'undefined' ? constructor : Cell;
 
-  var id = this.id;
+  var tag = this.tag;
   var type = this.type;
   var layers = {
     tile: this.layers.tile,
@@ -546,22 +548,25 @@ Cell.prototype.clone = function(constructor) {
   var clone;
 
   if(constructor !== Cell) {
-    clone = new constructor(id, layers);
+    clone = new constructor(tag, layers);
   } else {
-    clone = new constructor(id, type, layers);
+    clone = new Cell(type, tag, layers);
   }
 
   return clone;
 };
 
-function Corridor(id, layers) {
+Cell.prototype.orientation = function() {
+  return 'center';
+};
+
+function Corridor(tag, layers) {
   'use strict';
   
   layers = typeof layers !== 'undefined' ? layers : {};
-  // layers.tile = 'C'; //debug
-  layers.tile = 'floor-c';
+  layers.tile = typeof layers.tile !== 'undefined' ? layers.tile : 'Corridor-sc-sw';
 
-  Cell.call(this, id, 'corridor', layers);
+  Cell.call(this, 'corridor', tag, layers);
 }
 
 Corridor.prototype = Object.create(Cell.prototype);
@@ -573,14 +578,17 @@ Corridor.prototype.clone = (function(_super) {
   };
 })(Cell.prototype.clone);
 
-function Entrance(id, layers) {
+Corridor.prototype.orientation = function(matrix, pos) {
+  return 'center';
+};
+
+function Entrance(tag, layers) {
   'use strict';
   
   layers = typeof layers !== 'undefined' ? layers : {};
-  layers.tile = 'floor-c';
-  layers.furniture = new Door();
+  layers.furniture = typeof layers.furniture !== 'undefined' ? layers.furniture : new Door();
 
-  Cell.call(this, id, 'entrance', layers);
+  Cell.call(this, 'entrance', tag, layers);
 }
 
 Entrance.prototype = Object.create(Cell.prototype);
@@ -592,32 +600,49 @@ Entrance.prototype.clone = (function(_super) {
   };
 })(Cell.prototype.clone);
 
-function Hull(id, layers) {
+Entrance.prototype.orientation = function(matrix, pos) {
+  var orientation;
+
+  var up = matrix.val(pos.up());
+  var connectedUp = false;
+  if(typeof up !== 'undefined' && (up.type === 'room' || up.type === 'corridor')) {
+    connectedUp = true;
+  }
+
+  var right = matrix.val(pos.right());
+  var connectedRight = false;
+  if(typeof right !== 'undefined' && (right.type === 'room' || right.type === 'corridor')) {
+    connectedRight = true;
+  }
+
+  var down = matrix.val(pos.down());
+  var connectedDown = false;
+  if(typeof down !== 'undefined' && (down.type === 'room' || down.type === 'corridor')) {
+    connectedDown = true;
+  }
+
+  var left = matrix.val(pos.left());
+  var connectedLeft = false;
+  if(typeof left !== 'undefined' && (left.type === 'room' || left.type === 'corridor')) {
+    connectedLeft = true;
+  }
+
+  if(connectedUp && connectedDown) {
+    orientation = 'ne-sw';
+  } else if(connectedRight && connectedLeft) {
+    orientation = 'nw-se';
+  }
+
+  return orientation;
+};
+
+function RoomCell(tag, layers) {
   'use strict';
   
   layers = typeof layers !== 'undefined' ? layers : {};
-  layers.tile = 'wall-c';
+  layers.tile = typeof layers.tile !== 'undefined' ? layers.tile : 'RoomCell-sc-sw';
 
-  Cell.call(this, id, 'hull', layers);
-}
-
-Hull.prototype = Object.create(Cell.prototype);
-Hull.prototype.constructor = Hull;
-
-Hull.prototype.clone = (function(_super) {
-  return function() {
-    return _super.call(this, Hull);
-  };
-})(Cell.prototype.clone);
-
-function RoomCell(id, layers) {
-  'use strict';
-
-  layers = typeof layers !== 'undefined' ? layers : {};
-  // layers.tile = 'R'; //debug
-  layers.tile = 'floor-c';
-
-  Cell.call(this, id, 'room', layers);
+  Cell.call(this, 'room', tag, layers);
 }
 
 RoomCell.prototype = Object.create(Cell.prototype);
@@ -629,24 +654,173 @@ RoomCell.prototype.clone = (function(_super) {
   };
 })(Cell.prototype.clone);
 
-function Matrix(boundaries, paddings) {
+RoomCell.prototype.orientation = function(matrix, pos) {
+  return 'center';
+};
+
+function Wall(tag, layers) {
+  'use strict';
+  
+  layers = typeof layers !== 'undefined' ? layers : {};
+  layers.tile = typeof layers.tile !== 'undefined' ? layers.tile : 'Wall-sc-sw';
+
+  Cell.call(this, 'wall', tag, layers);
+}
+
+Wall.prototype = Object.create(Cell.prototype);
+Wall.prototype.constructor = Wall;
+
+Wall.prototype.clone = (function(_super) {
+  return function() {
+    return _super.call(this, Wall);
+  };
+})(Cell.prototype.clone);
+
+Wall.prototype.orientation = function(matrix, pos) {
+  var cell = matrix.val(pos);
+  var orientation;
+
+  var connections = {
+    n: matrix.val(pos.up().left()),
+    ne: matrix.val(pos.up()),
+    e: matrix.val(pos.up().right()),
+    se: matrix.val(pos.right()),
+    s: matrix.val(pos.down().right()),
+    sw: matrix.val(pos.down()),
+    w: matrix.val(pos.down().left()),
+    nw: matrix.val(pos.left())
+  };
+
+  for(var c in connections) {
+    if(typeof connections[c] !== 'undefined' && connections[c].type === cell.type) {
+      connections[c] = true;
+    } else {
+      connections[c] = false;
+    }
+  }
+
+  if(
+    // !connections.n &&
+    !connections.ne &&
+    // !connections.e &&
+    connections.se &&
+    connections.s &&
+    connections.sw &&
+    // !connections.w &&
+    !connections.nw
+  ) {
+    orientation = 'n';
+  } else if(
+    // !connections.n &&
+    !connections.ne &&
+    // !connections.e &&
+    connections.se &&
+    connections.s &&
+    connections.sw &&
+    connections.w &&
+    connections.nw
+  ) {
+    orientation = 'ne';
+  } else if(
+    // !connections.n &&
+    !connections.ne &&
+    // !connections.e &&
+    !connections.se &&
+    // connections.s &&
+    connections.sw &&
+    connections.w &&
+    connections.nw
+  ) {
+    orientation = 'e';
+  } else if(
+    connections.n &&
+    connections.ne &&
+    // !connections.e &&
+    !connections.se &&
+    // !connections.s &&
+    connections.sw &&
+    connections.w &&
+    connections.nw
+  ) {
+    orientation = 'se';
+  } else if(
+    connections.n &&
+    connections.ne &&
+    // !connections.e &&
+    !connections.se &&
+    // !connections.s &&
+    !connections.sw &&
+    // !connections.w &&
+    connections.nw
+  ) {
+    orientation = 's';
+  } else if(
+    connections.n &&
+    connections.ne &&
+    connections.e &&
+    connections.se &&
+    // !connections.s &&
+    !connections.sw &&
+    // !connections.w &&
+    connections.nw
+  ) {
+    orientation = 'sw';
+  }  else if(
+    // connections.n &&
+    connections.ne &&
+    connections.e &&
+    connections.se &&
+    // !connections.s &&
+    !connections.sw &&
+    // !connections.w &&
+    !connections.nw
+  ) {
+    orientation = 'w';
+  }  else if(
+    // connections.n &&
+    connections.ne &&
+    connections.e &&
+    connections.se &&
+    connections.s &&
+    connections.sw &&
+    // !connections.w &&
+    !connections.nw
+  ) {
+    orientation = 'nw';
+  } else if(
+    !connections.ne &&
+    !connections.se &&
+    !connections.sw &&
+    !connections.nw
+  ) {
+    orientation = 'island';
+  } else {
+    orientation = 'island';
+  }
+
+  return orientation;
+};
+
+function Matrix(boundaries, paddings, placeCells) {
   'use strict';
   
   boundaries = typeof boundaries !== 'undefined' ? boundaries : new Boundaries();
   paddings = typeof paddings !== 'undefined' ? paddings : Matrix.defaults.paddings;
+  placeCells = typeof placeCells !== 'undefined' ? placeCells : Matrix.defaults.placeCells;
 
   this.boundaries = boundaries;
-  this.body = Matrix.genBody(boundaries);
+  this.body = Matrix.genBody(boundaries, placeCells);
   this.center = this.getCenter();
   this.volume = this.getVolume();
   this.paddings = paddings;
 }
 
 Matrix.defaults = {
-  paddings: 0
+  paddings: 0,
+  placeCells: true
 };
 
-Matrix.genBody = function(boundaries) {
+Matrix.genBody = function(boundaries, placeCells) {
   boundaries = typeof boundaries !== 'undefined' ? boundaries: new Boundaries();
 
   var body = [];
@@ -656,7 +830,11 @@ Matrix.genBody = function(boundaries) {
     for (var y = 0; y < boundaries.y; y++) {
       body[x][y] = [];
       for (var z = 0; z < boundaries.z; z++) {
-        body[x][y][z] = new Cell();
+        if(placeCells) {
+          body[x][y][z] = new Cell();
+        } else {
+          body[x][y][z] = null;
+        }
       }
     }
   }
@@ -931,6 +1109,7 @@ Matrix.prototype.toIsometric = function() {
   );
 
   var clone = new Matrix(_boundaries);
+  var originalCoords = {};
 
   var xCenter = Math.floor(boundaries.y / 2);
   var xOffset = 0;
@@ -940,6 +1119,7 @@ Matrix.prototype.toIsometric = function() {
   var pos;
   var _pos;
   var cell;
+
 
   for(var x in body) {
     _x = xCenter + xOffset;
@@ -954,15 +1134,20 @@ Matrix.prototype.toIsometric = function() {
 
       _pos = new Point(_x, _y, 0);
       clone.val(_pos, cell);
+
+      var coord = x + ':' + y + ':' + 0;
+      var isoCoord = _x + ':' + _y + ':' + 0;
+      originalCoords[isoCoord] = coord;
     }
     if(parseInt(x)%2 === 1) xOffset++;
     yOffset++;
   }
 
-  clone.trim(true);
+  // clone.trim(true);
 
   this.body = clone.body;
   this.update();
+  this.originalCoords = originalCoords;
 };
 
 Matrix.prototype.checkPlacement = function(srcMatrix, pos) {
@@ -1157,7 +1342,7 @@ Matrix.prototype.contains = function(pos, excludePaddings) {
 Matrix.prototype.mark = function(pos) {
   if(this.contains(pos) === true) {
     console.log(this.val(pos));
-    var mark = new Cell('m', 'mark', {tile: 'mark'});
+    var mark = new Cell('mark', 'm', {tile: 'mark'});
     this.val(pos, mark);
   } else {
     return undefined;
@@ -1605,6 +1790,8 @@ Builder.prototype.checkPos = function(pos, direction) {
 };
 
 function Furniture(type, gfx, itens) {
+  'use strict';
+
   type = typeof type !== 'undefined' ? type : Furniture.defaults.type;
   gfx = typeof gfx !== 'undefined' ? gfx : Furniture.defaults.gfx;
   itens = typeof itens !== 'undefined' ? itens : Furniture.defaults.itens;
@@ -1618,18 +1805,21 @@ Furniture.defaults = {
   gfx: 'placeholder-furniture',
   itens: []
 };
-function Door(orientation) {  
+
+function Door(orientation) {
+  'use strict';
+
   var gfx;
 
   switch(orientation) {
-    case 'nEast-sWest':
-      gfx = 'door-ne-sw';
-
-    case 'nEast-sWest':
-      gfx = 'door-nw-se';
-
+    case 'x':
+      gfx = 'door-open-se';
+      break;
+    case 'y':
+      gfx = 'door-open-sw';
+      break;
     default:
-      gfx = 'door-ne-sw';
+      gfx = 'door-open-se';
   }
 
   Furniture.call(this, 'door', gfx);
@@ -1639,6 +1829,8 @@ Door.prototype = Object.create(Furniture.prototype);
 Door.prototype.constructor = Door;
 
 function Item(type, gfx) {
+  'use strict';
+
   type = typeof type !== 'undefined' ? type : Item.defaults.type;
   gfx = typeof gfx !== 'undefined' ? gfx : Item.defaults.gfx;
 
@@ -1650,6 +1842,7 @@ Item.defaults = {
   type: 'generic-item',
   gfx: 'placeholder-furniture',
 };
+
 function Cleaner(engineer, options) {
   'use strict';
 
@@ -1890,6 +2083,7 @@ Roomer.prototype.roomPlacementPos = function() {
 };
 
 Roomer.prototype.buildEntrance = function(pos) {
+  var pAxis = this.primaryAxis;
   var sAxis = this.secondaryAxis;
   var sAxisLength = this.room.matrix.boundaries[sAxis];
   var maxEntrances = (sAxisLength  - 1) / 2;
@@ -1901,9 +2095,7 @@ Roomer.prototype.buildEntrance = function(pos) {
     var selectedPos = Tool.randAttr(entrancePos);
     var index = entrancePos.indexOf(selectedPos);
 
-    this.tgtMatrix.val(selectedPos, new Entrance(this.id, {
-      furniture: ['Door']//change to object
-    }));
+    this.tgtMatrix.val(selectedPos, new Entrance(this.id));
 
     var _index = index;
     var exclude = 1;
@@ -2039,13 +2231,8 @@ Tunneler.job = function(tunneler) {
   var pos = tunneler.pos;
   var tgtMatrix = tunneler.tgtMatrix;
 
-  // if(tunneler.history.length === 0) {//debug
-  //   var m = new Matrix(new Boundaries());
-  //   m.val(new Point(), new Cell(tunneler.id, 'corridor', {tile: 'S'}));
-  //   m.transferTo(tgtMatrix, pos);
-  // } else {
-    corridor.transferTo(tgtMatrix, pos.toTopLeft(corridor));
-  // }
+  corridor.transferTo(tgtMatrix, pos.toTopLeft(corridor));
+
   tunneler.history.push(pos);
 };
 
@@ -2098,10 +2285,12 @@ Tunneler.prototype.die = function() {
   }
 
 };
-function ShipEngineer(ship) {
+function ShipEngineer(targetMatrix, buildOptions) {
   'use strict';
 
-  this.ship = ship;
+  this.targetMatrix = targetMatrix;
+  this.buildOptions = buildOptions;
+  
   this.buildersCount = 0;
   this.generation = 0;
   this.builders = {
@@ -2239,7 +2428,7 @@ ShipEngineer.prototype.placeRoom = function(room, point) {
 
   this.discartBlueprint();
   srcMatrix.transferTo(destMatrix, point);
-  this.logRoom(room);
+  this.logRoom(room, point);
   // console.log('placed at ' + point.x + ' ' + point.y + ' ' + point.z);
 };
 
@@ -2309,7 +2498,7 @@ ShipEngineer.prototype.seedConnectors = function() {
   this.build();
 };
 
-ShipEngineer.prototype.assembleHull = function(thickness) {
+ShipEngineer.prototype.buildWalls = function(thickness) {
   thickness = typeof thickness !== 'undefined' ? thickness : 2;
 
   var ship = this.ship;
@@ -2320,7 +2509,7 @@ ShipEngineer.prototype.assembleHull = function(thickness) {
     var pos = new Point(x, y, z);
     var cell = m.val(pos);
     if(cell.type !== 'void') {
-      return new Hull();
+      return new Wall();
     } else {
       return false;
     }
@@ -2490,6 +2679,21 @@ ShipEngineer.prototype.mirrorShip = function(axis, offset) {
   // console.log('mirrored Ship');
 };
 
+ShipEngineer.prototype.paintTiles = function() {
+  var matrix = this.ship.matrix;
+
+  matrix.iterate(function(m, x, y, z, e) {
+    var pos = new Point(x, y, z);
+    var cell = m.val(pos);
+    var type = cell.type;
+    
+    var orientation = cell.orientation(m, pos);
+    var tile = type + '-' + orientation;
+
+    cell.layers.tile = tile;
+  });
+};
+
 function Module(type, size) {
   'use strict';
   
@@ -2498,112 +2702,82 @@ function Module(type, size) {
   this.volume = null;
 }
 
-function Ship(size, shipClass, faction) {
+function Ship(options) {
   'use strict';
 
-  size = typeof size !== 'undefined' ? size : Ship.defaults.size;
-  shipClass = typeof shipClass !== 'undefined' ? shipClass : Ship.defaults.shipClass;
-  faction = typeof faction !== 'undefined' ? faction : Ship.defaults.faction;
-
-  this.name = 'Forgotten Hull';
-  this.size = size;
-  this.shipClass = shipClass;
-  this.faction = faction;
-  this.age = null;
-  this.integrity = null;
-  this.build();
+  this.initDefaultOptions();
+  this.applyOptions(options);
+  this.buildShip();
 }
 
-Ship.defaults = {
-  size: 'medium',
-  shipClass: 'transport',
-  faction: 'faction',
-  spawnChances: 20
-};
-
-Ship.gen = {
-  params: {
+Ship.prototype.initDefaultOptions = function() {
+  this.name = null;
+  this.size = 'medium';
+  this.shipClass = 'transport';
+  this.faction = null;
+  this.age = null;
+  this.integrity = null;
+  this.matrix = null;
+  this.buildOptions = {
+    spawnChances: 20,
     sizeFactor: 5,
     roomPaddings: 1,
+    simmetry: Tool.randAttr(['noSimmetry', 'x', 'y', 'z', 'xy', 'xz', 'yz', 'xyz']),
+    roomPlacementLogic: 'clustered',
     corridorsVsRooms: [20, 80],
     connectorMaxLength: 10,
     connectorsPerRoom: function() {
       return Tool.randRange(3, 5);
     }
+  };
+};
+
+Ship.prototype.applyOptions = function(options) {
+  for(var o in options) {
+    this[o] = options[o];
   }
 };
 
-Ship.prototype.build = function() {
-  window.ship = this; //DEBUG MODE
-  var sEngineer = new ShipEngineer(this);
-  window.sEngineer = sEngineer; //DEBUG MODE
+Ship.prototype.generateShip = function() {
+  var sEngineer = new ShipEngineer(this.matrix, this.buildOptions);
 
-  if(Tool.debugMode !== true) {
-    do {
-      sEngineer.seedShip();
-    } while(sEngineer.blueprints.length > 0);
+  do {
+    sEngineer.seedShip();
+  } while(sEngineer.blueprints.length > 0);
 
-    sEngineer.clean();
-    sEngineer.mirrorShip('x', 0);
-
-    sEngineer.seedConnectors();
-    sEngineer.assembleHull();
-  } else { //DEBUG MODE
-    var simmetry = Tool.randAttr(['noSimmetry', 'x', 'y', 'z', 'xy', 'xz', 'yz', 'xyz']); //make dynamic and relative to faction
-    var placement = 'clustered'; //make dynamic and relative to faction
-    sEngineer.genBlueprints();
-
-    sEngineer.ship.rooms = [];
-    sEngineer.ship.matrix = sEngineer.genMatrix();
-
-    sEngineer.addTunneler({startingPos: ship.matrix.center});
-
-    var i = setInterval(function() {
-      var builders = sEngineer.builders;
-
-      if(builders.current.length > 0) {
-        for(var b in builders.current) {
-          builders.current[b].work();
-        }
-        sEngineer.recycle();
-      } else {
-        clearInterval(i);
-        console.log('stopped building');
-
-        var j = setInterval(function() {
-          var dormants = sEngineer.builders.dormants;
-
-          if(dormants.length > 0) {
-            var currentDormants = dormants[dormants.length - 1];
-            for(var f in currentDormants) {
-              currentDormants[f].work();
-            }
-            sEngineer.recycleDormants();
-          } else {
-            clearInterval(j);
-            console.log('stopped finalizing');
-            // sEngineer.clean();
-          }
-        }, 200);
-        console.log('started finalizing');
-      }
-    }, 200);
-    console.log('started building');
-  }
+  sEngineer.clean();
+  sEngineer.mirrorShip('x', 0);
+  sEngineer.seedConnectors();
+  sEngineer.buildWalls();
+  sEngineer.paintTiles();
 };
 
 function Main() {
   'use strict';
 }
 
+Main.seed;
+Main.activeShip;
+Main.renderTree = [];
+
 Main.setup = function() {
-  Main.seed = new Seed();
-  // console.log(Main.seed.val);
-  
-  Main.add(new Ship('small', 'transport', 'aaa'));
+  if(Debug.isActive) {
+    Main.seed = Debug.testSeed;
+  } else {
+    Main.seed = new Seed();
+  }
+
+  Main.activeShip = new Ship({
+    size: 'small',
+    shipClass:'transport',
+    faction: 'aaa'
+  });
+
+  Debug.ship = Main.activeShip;
+
+  Main.add(Main.activeShip);
 };
 
-Main.renderTree = [];
 
 Main.add = function(agent) {
   Main.renderTree.push(agent);
@@ -2623,9 +2797,19 @@ Main.render = function() {
       renderData[y] = [];
 
       for (var x = 0; x < tgtMatrix.boundaries.x; x++) {
-        var cell = tgtMatrix.body[x][y][0];
+        var pos = new Point(x, y);
+        var tgtCell = tgtMatrix.val(pos);
+        var cell = {
+          gfx: tgtCell.gfx
+        };
+
+        var isoCoord = x + ':' + y + ':' + 0;
+        var coord = tgtMatrix.originalCoords[isoCoord];
+        if(typeof coord !== 'undefined') {
+          cell.coord = coord;
+        }
         
-        renderData[y].push(cell.gfx);
+        renderData[y].push(cell);
       }
     }
   }
@@ -2633,7 +2817,253 @@ Main.render = function() {
   return renderData;
 };
 
-//debug
-// var t = new Tunneler(new Matrix(new Boundaries()));
-// console.log(t);
-// t.log();
+function Debug() {
+  'use strict';
+}
+
+Debug.isActive = true;
+Debug.testSeed = new Seed([0.0766652103047818, 0.30275367060676217, 0.596993870800361, 0.7203761290293187, 0.38902846770361066, 0.27975861774757504, 0.08317130524665117, 0.4589910348877311, 0.5111691541969776, 0.23604314564727247, 0.9095225303899497, 0.6272440790198743, 0.4422725737094879, 0.13375021889805794, 0.5131247511599213, 0.6365265878848732, 0.6037236745469272, 0.13834764808416367, 0.36745089502073824, 0.10566682880744338, 0.004052100237458944, 0.9348078134935349, 0.4305849205702543, 0.47952607506886125, 0.9128307139035314, 0.39439845364540815, 0.17352440604008734, 0.7272911814507097, 0.9000664129853249, 0.19049731688573956, 0.7953632536809891, 0.1970624017994851, 0.0664104341994971, 0.3589151706546545, 0.02092651673592627, 0.2827342425007373, 0.6295097207184881, 0.9869879384059459, 0.49925968958996236, 0.7908598408102989, 0.12279171496629715, 0.075769322225824, 0.9845602549612522, 0.60347198555246, 0.832235858310014, 0.265963303623721, 0.5002652022521943, 0.7501406089868397, 0.11367373401299119, 0.5452200109139085, 0.1998781415168196, 0.8940479126758873, 0.649708041222766, 0.40872108726762235, 0.15991716063581407, 0.3277851839084178, 0.810083458898589, 0.7217361943330616, 0.9329701534006745, 0.6141100523527712, 0.5738789825700223, 0.005348490085452795, 0.44847482815384865, 0.934847382362932, 0.3781907542143017, 0.006433484144508839, 0.9278857025783509, 0.528592947172001, 0.5474839098751545, 0.031197641510516405, 0.4876608639024198, 0.4397681476548314, 0.9763214450795203, 0.14099746895954013, 0.34013446466997266, 0.648816610686481, 0.02448343299329281, 0.46451316331513226, 0.08700197003781796, 0.5639283014461398, 0.4847217027563602, 0.4889513032976538, 0.6742827431298792, 0.23397055733948946, 0.5386293735355139, 0.3828783330973238, 0.35802917764522135, 0.15126433433033526, 0.3230858219321817, 0.07198468898423016, 0.8109060295391828, 0.5076154703274369, 0.505962171824649, 0.43487908272072673, 0.9442447666078806, 0.8458902046550065, 0.5885112625546753, 0.3366181794553995, 0.3018607727717608, 0.43666884605772793]);
+Debug.ship;
+
+Debug.getCoord = function(_event) {
+  var target = _event.currentTarget;
+  var coord = target.dataset.coord;
+  
+  return coord;
+};
+
+Debug.coordToPos = function(coord) {
+  coord = coord.split(':');
+  var pos = new Point(coord[0], coord[1], coord[2]);
+
+  return pos;
+};
+
+Debug.getConnections = function(pos) {
+  var matrix = Debug.ship.matrix;
+  var cell = matrix.val(pos);
+
+  var connections = {
+    n: pos.up().left(),
+    ne: pos.up(),
+    e: pos.up().right(),
+    se: pos.right(),
+    s: pos.down().right(),
+    sw: pos.down(),
+    w: pos.down().left(),
+    nw: pos.left()
+  };
+
+  return connections;
+};
+
+Debug.printConnections = function(_event) {
+  if(Debug.isActive) {
+    var coord = Debug.getCoord(_event);
+    var pos = Debug.coordToPos(coord);
+    var connections = Debug.getConnections(pos);
+
+    console.log(connections);
+  }
+};
+
+Debug.markConnections = function(_event) {
+  if(Debug.isActive) {
+    var coord = Debug.getCoord(_event);
+    if(typeof coord === 'string') {
+      var pos = Debug.coordToPos(coord);
+      var connections = Debug.getConnections(pos);
+
+      var matrix = Debug.ship.matrix;
+
+      Debug.ship.matrix.mark(pos);
+
+      for(var c in connections) {
+        // Debug.ship.matrix.mark(connections[c]);
+        var cell = matrix.val(connections[c]);
+        console.log(c + ': ' + cell.type);
+      }
+
+    } else {
+      console.log('nothing to mark at ' + coord);
+    }
+  }
+};
+
+Debug.getOrientation = function(_event) {
+  if(Debug.isActive) {
+    var matrix = Debug.ship.matrix;
+    var coord = Debug.getCoord(_event);
+    var pos = Debug.coordToPos(coord);
+    var cell = matrix.val(pos);
+    var orientation;
+
+    var connections = {
+      n: matrix.val(pos.up().left()),
+      ne: matrix.val(pos.up()),
+      e: matrix.val(pos.up().right()),
+      se: matrix.val(pos.right()),
+      s: matrix.val(pos.down().right()),
+      sw: matrix.val(pos.down()),
+      w: matrix.val(pos.down().left()),
+      nw: matrix.val(pos.left())
+    };
+
+    for(var c in connections) {
+      console.log(c + ': ' + connections[c].type);
+      if(typeof connections[c] !== 'undefined' && connections[c].type === cell.type) {
+        connections[c] = true;
+      } else {
+        connections[c] = false;
+      }
+    }
+
+    console.log(connections);
+
+    if(
+      // !connections.n &&
+      !connections.ne &&
+      // !connections.e &&
+      connections.se &&
+      connections.s &&
+      connections.sw &&
+      // !connections.w &&
+      !connections.nw
+    ) {
+      orientation = 'n';
+    } else if(
+      // !connections.n &&
+      !connections.ne &&
+      // !connections.e &&
+      connections.se &&
+      connections.s &&
+      connections.sw &&
+      connections.w &&
+      connections.nw
+    ) {
+      orientation = 'ne';
+    } else if(
+      // !connections.n &&
+      !connections.ne &&
+      // !connections.e &&
+      !connections.se &&
+      // connections.s &&
+      connections.sw &&
+      connections.w &&
+      connections.nw
+    ) {
+      orientation = 'e';
+    } else if(
+      connections.n &&
+      connections.ne &&
+      // !connections.e &&
+      !connections.se &&
+      // !connections.s &&
+      connections.sw &&
+      connections.w &&
+      connections.nw
+    ) {
+      orientation = 'se';
+    } else if(
+      connections.n &&
+      connections.ne &&
+      // !connections.e &&
+      !connections.se &&
+      // !connections.s &&
+      !connections.sw &&
+      // !connections.w &&
+      connections.nw
+    ) {
+      orientation = 's';
+    } else if(
+      connections.n &&
+      connections.ne &&
+      connections.e &&
+      connections.se &&
+      // !connections.s &&
+      !connections.sw &&
+      // !connections.w &&
+      connections.nw
+    ) {
+      orientation = 'sw';
+    }  else if(
+      // connections.n &&
+      connections.ne &&
+      connections.e &&
+      connections.se &&
+      // !connections.s &&
+      !connections.sw &&
+      // !connections.w &&
+      !connections.nw
+    ) {
+      orientation = 'w';
+    }  else if(
+      // connections.n &&
+      connections.ne &&
+      connections.e &&
+      connections.se &&
+      connections.s &&
+      connections.sw &&
+      // !connections.w &&
+      !connections.nw
+    ) {
+      orientation = 'nw';
+    } else if(
+      !connections.ne &&
+      !connections.se &&
+      !connections.sw &&
+      !connections.nw
+    ) {
+      orientation = 'island';
+    } else {
+      orientation = 'island';
+    }
+
+    console.log(orientation);
+    matrix.mark(pos);
+  }
+}
+
+// else { //DEBUG MODE
+//     var simmetry = Tool.randAttr(['noSimmetry', 'x', 'y', 'z', 'xy', 'xz', 'yz', 'xyz']); //make dynamic and relative to faction
+//     var placement = 'clustered'; //make dynamic and relative to faction
+//     sEngineer.genBlueprints();
+
+//     sEngineer.ship.rooms = [];
+//     sEngineer.ship.matrix = sEngineer.genMatrix();
+
+//     sEngineer.addTunneler({startingPos: ship.matrix.center});
+
+//     var i = setInterval(function() {
+//       var builders = sEngineer.builders;
+
+//       if(builders.current.length > 0) {
+//         for(var b in builders.current) {
+//           builders.current[b].work();
+//         }
+//         sEngineer.recycle();
+//       } else {
+//         clearInterval(i);
+//         console.log('stopped building');
+
+//         var j = setInterval(function() {
+//           var dormants = sEngineer.builders.dormants;
+
+//           if(dormants.length > 0) {
+//             var currentDormants = dormants[dormants.length - 1];
+//             for(var f in currentDormants) {
+//               currentDormants[f].work();
+//             }
+//             sEngineer.recycleDormants();
+//           } else {
+//             clearInterval(j);
+//             console.log('stopped finalizing');
+//             // sEngineer.clean();
+//           }
+//         }, 200);
+//         console.log('started finalizing');
+//       }
+//     }, 200);
+//     console.log('started building');
+//   }
+// };

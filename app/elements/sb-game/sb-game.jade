@@ -25,9 +25,9 @@ html
         template(is='dom-repeat', items='{{renderData}}', as='row')
           div.row
             template(is='dom-repeat', items='{{row}}', as='cell')
-              div.cell
-                template(is='dom-repeat', items='{{cell}}', as='layer')
-                  div(class$='{{getLayerClass(layer)}}')
+              div.cell(onclick='Debug.getOrientation(event)', data-coord$='{{cell.coord}}')
+                template(is='dom-repeat', items='{{cell.gfx}}', as='gfxLayer')
+                  div(class$='{{getLayerClass(gfxLayer)}}')
     
     script.
       (function() {

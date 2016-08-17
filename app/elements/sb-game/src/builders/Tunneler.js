@@ -94,13 +94,8 @@ Tunneler.job = function(tunneler) {
   var pos = tunneler.pos;
   var tgtMatrix = tunneler.tgtMatrix;
 
-  // if(tunneler.history.length === 0) {//debug
-  //   var m = new Matrix(new Boundaries());
-  //   m.val(new Point(), new Cell(tunneler.id, 'corridor', {tile: 'S'}));
-  //   m.transferTo(tgtMatrix, pos);
-  // } else {
-    corridor.transferTo(tgtMatrix, pos.toTopLeft(corridor));
-  // }
+  corridor.transferTo(tgtMatrix, pos.toTopLeft(corridor));
+
   tunneler.history.push(pos);
 };
 

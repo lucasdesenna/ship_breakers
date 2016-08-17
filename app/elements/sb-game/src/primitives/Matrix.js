@@ -1,21 +1,23 @@
-function Matrix(boundaries, paddings) {
+function Matrix(boundaries, paddings, placeCells) {
   'use strict';
   
   boundaries = typeof boundaries !== 'undefined' ? boundaries : new Boundaries();
   paddings = typeof paddings !== 'undefined' ? paddings : Matrix.defaults.paddings;
+  placeCells = typeof placeCells !== 'undefined' ? placeCells : Matrix.defaults.placeCells;
 
   this.boundaries = boundaries;
-  this.body = Matrix.genBody(boundaries);
+  this.body = Matrix.genBody(boundaries, placeCells);
   this.center = this.getCenter();
   this.volume = this.getVolume();
   this.paddings = paddings;
 }
 
 Matrix.defaults = {
-  paddings: 0
+  paddings: 0,
+  placeCells: true
 };
 
-Matrix.genBody = function(boundaries) {
+Matrix.genBody = function(boundaries, placeCells) {
   boundaries = typeof boundaries !== 'undefined' ? boundaries: new Boundaries();
 
   var body = [];
@@ -25,7 +27,11 @@ Matrix.genBody = function(boundaries) {
     for (var y = 0; y < boundaries.y; y++) {
       body[x][y] = [];
       for (var z = 0; z < boundaries.z; z++) {
-        body[x][y][z] = new Cell();
+        if(placeCells) {
+          body[x][y][z] = new Cell();
+        } else {
+          body[x][y][z] = null;
+        }
       }
     }
   }
@@ -300,6 +306,7 @@ Matrix.prototype.toIsometric = function() {
   );
 
   var clone = new Matrix(_boundaries);
+  var originalCoords = {};
 
   var xCenter = Math.floor(boundaries.y / 2);
   var xOffset = 0;
@@ -309,6 +316,7 @@ Matrix.prototype.toIsometric = function() {
   var pos;
   var _pos;
   var cell;
+
 
   for(var x in body) {
     _x = xCenter + xOffset;
@@ -323,15 +331,20 @@ Matrix.prototype.toIsometric = function() {
 
       _pos = new Point(_x, _y, 0);
       clone.val(_pos, cell);
+
+      var coord = x + ':' + y + ':' + 0;
+      var isoCoord = _x + ':' + _y + ':' + 0;
+      originalCoords[isoCoord] = coord;
     }
     if(parseInt(x)%2 === 1) xOffset++;
     yOffset++;
   }
 
-  clone.trim(true);
+  // clone.trim(true);
 
   this.body = clone.body;
   this.update();
+  this.originalCoords = originalCoords;
 };
 
 Matrix.prototype.checkPlacement = function(srcMatrix, pos) {
@@ -526,7 +539,7 @@ Matrix.prototype.contains = function(pos, excludePaddings) {
 Matrix.prototype.mark = function(pos) {
   if(this.contains(pos) === true) {
     console.log(this.val(pos));
-    var mark = new Cell('m', 'mark', {tile: 'mark'});
+    var mark = new Cell('mark', 'm', {tile: 'mark'});
     this.val(pos, mark);
   } else {
     return undefined;

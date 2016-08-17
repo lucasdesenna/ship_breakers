@@ -57,6 +57,7 @@ Roomer.prototype.roomPlacementPos = function() {
 };
 
 Roomer.prototype.buildEntrance = function(pos) {
+  var pAxis = this.primaryAxis;
   var sAxis = this.secondaryAxis;
   var sAxisLength = this.room.matrix.boundaries[sAxis];
   var maxEntrances = (sAxisLength  - 1) / 2;
@@ -68,9 +69,7 @@ Roomer.prototype.buildEntrance = function(pos) {
     var selectedPos = Tool.randAttr(entrancePos);
     var index = entrancePos.indexOf(selectedPos);
 
-    this.tgtMatrix.val(selectedPos, new Entrance(this.id, {
-      furniture: ['Door']//change to object
-    }));
+    this.tgtMatrix.val(selectedPos, new Entrance(this.id));
 
     var _index = index;
     var exclude = 1;

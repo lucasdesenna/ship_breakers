@@ -1,4 +1,6 @@
 function Item(type, gfx) {
+  'use strict';
+
   type = typeof type !== 'undefined' ? type : Item.defaults.type;
   gfx = typeof gfx !== 'undefined' ? gfx : Item.defaults.gfx;
 

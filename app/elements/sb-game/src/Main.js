@@ -2,14 +2,28 @@ function Main() {
   'use strict';
 }
 
+Main.seed;
+Main.activeShip;
+Main.renderTree = [];
+
 Main.setup = function() {
-  Main.seed = new Seed();
-  // console.log(Main.seed.val);
-  
-  Main.add(new Ship('small', 'transport', 'aaa'));
+  if(Debug.isActive) {
+    Main.seed = Debug.testSeed;
+  } else {
+    Main.seed = new Seed();
+  }
+
+  Main.activeShip = new Ship({
+    size: 'small',
+    shipClass:'transport',
+    faction: 'aaa'
+  });
+
+  Debug.ship = Main.activeShip;
+
+  Main.add(Main.activeShip);
 };
 
-Main.renderTree = [];
 
 Main.add = function(agent) {
   Main.renderTree.push(agent);
@@ -29,9 +43,19 @@ Main.render = function() {
       renderData[y] = [];
 
       for (var x = 0; x < tgtMatrix.boundaries.x; x++) {
-        var cell = tgtMatrix.body[x][y][0];
+        var pos = new Point(x, y);
+        var tgtCell = tgtMatrix.val(pos);
+        var cell = {
+          gfx: tgtCell.gfx
+        };
+
+        var isoCoord = x + ':' + y + ':' + 0;
+        var coord = tgtMatrix.originalCoords[isoCoord];
+        if(typeof coord !== 'undefined') {
+          cell.coord = coord;
+        }
         
-        renderData[y].push(cell.gfx);
+        renderData[y].push(cell);
       }
     }
   }

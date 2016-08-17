@@ -1,7 +1,9 @@
-function ShipEngineer(ship) {
+function ShipEngineer(targetMatrix, buildOptions) {
   'use strict';
 
-  this.ship = ship;
+  this.targetMatrix = targetMatrix;
+  this.buildOptions = buildOptions;
+  
   this.buildersCount = 0;
   this.generation = 0;
   this.builders = {
@@ -139,7 +141,7 @@ ShipEngineer.prototype.placeRoom = function(room, point) {
 
   this.discartBlueprint();
   srcMatrix.transferTo(destMatrix, point);
-  this.logRoom(room);
+  this.logRoom(room, point);
   // console.log('placed at ' + point.x + ' ' + point.y + ' ' + point.z);
 };
 
@@ -209,7 +211,7 @@ ShipEngineer.prototype.seedConnectors = function() {
   this.build();
 };
 
-ShipEngineer.prototype.assembleHull = function(thickness) {
+ShipEngineer.prototype.buildWalls = function(thickness) {
   thickness = typeof thickness !== 'undefined' ? thickness : 2;
 
   var ship = this.ship;
@@ -220,7 +222,7 @@ ShipEngineer.prototype.assembleHull = function(thickness) {
     var pos = new Point(x, y, z);
     var cell = m.val(pos);
     if(cell.type !== 'void') {
-      return new Hull();
+      return new Wall();
     } else {
       return false;
     }
@@ -388,4 +390,19 @@ ShipEngineer.prototype.mirrorShip = function(axis, offset) {
 
   this.updateRooms();
   // console.log('mirrored Ship');
+};
+
+ShipEngineer.prototype.paintTiles = function() {
+  var matrix = this.ship.matrix;
+
+  matrix.iterate(function(m, x, y, z, e) {
+    var pos = new Point(x, y, z);
+    var cell = m.val(pos);
+    var type = cell.type;
+    
+    var orientation = cell.orientation(m, pos);
+    var tile = type + '-' + orientation;
+
+    cell.layers.tile = tile;
+  });
 };

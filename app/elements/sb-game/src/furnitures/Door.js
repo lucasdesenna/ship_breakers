@@ -1,15 +1,17 @@
-function Door(orientation) {  
+function Door(orientation) {
+  'use strict';
+
   var gfx;
 
   switch(orientation) {
-    case 'nEast-sWest':
-      gfx = 'door-ne-sw';
-
-    case 'nEast-sWest':
-      gfx = 'door-nw-se';
-
+    case 'x':
+      gfx = 'door-open-se';
+      break;
+    case 'y':
+      gfx = 'door-open-sw';
+      break;
     default:
-      gfx = 'door-ne-sw';
+      gfx = 'door-open-se';
   }
 
   Furniture.call(this, 'door', gfx);

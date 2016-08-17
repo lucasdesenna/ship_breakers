@@ -5,7 +5,7 @@
   color: white;
   background: black;
 }
-</style><div id="sb-screen" class="grid"><template is="dom-repeat" items="{{renderData}}" as="row"><div class="row"><template is="dom-repeat" items="{{row}}" as="cell"><div class="cell"><template is="dom-repeat" items="{{cell}}" as="layer"><div class$="{{getLayerClass(layer)}}"></div></template></div></template></div></template></div></template><script>(function() {
+</style><div id="sb-screen" class="grid"><template is="dom-repeat" items="{{renderData}}" as="row"><div class="row"><template is="dom-repeat" items="{{row}}" as="cell"><div onclick="Debug.getOrientation(event)" data-coord$="{{cell.coord}}" class="cell"><template is="dom-repeat" items="{{cell.gfx}}" as="gfxLayer"><div class$="{{getLayerClass(gfxLayer)}}"></div></template></div></template></div></template></div></template><script>(function() {
   'use strict';
   Polymer({
     is: 'sb-game',

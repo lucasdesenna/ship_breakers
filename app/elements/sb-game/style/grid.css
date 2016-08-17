@@ -33,7 +33,7 @@
   clear: both;
 }
 .grid > .row:not(:first-child) {
-  margin: -26px 0 0;
+  margin: -25px 0 0;
 }
 .grid > .row:nth-child(odd) {
   left: 16px;

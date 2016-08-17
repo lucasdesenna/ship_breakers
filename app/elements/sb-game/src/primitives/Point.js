@@ -5,9 +5,9 @@ function Point(x, y, z) {
   y = typeof y !== 'undefined' ? y : 0;
   z = typeof z !== 'undefined' ? z : 0;
 
-  this.x = x;
-  this.y = y;
-  this.z = z;
+  this.x = parseInt(x);
+  this.y = parseInt(y);
+  this.z = parseInt(z);
 }
 
 Point.prototype.distanceTo = function(point) {
@@ -63,53 +63,57 @@ Point.prototype.flatten = function() {
 
 Point.prototype.up = function(steps) {
   steps = typeof steps !== 'undefined' ? steps : 1;
+  var _y = this.y - steps;
 
-  return new Point(this.x, this.y - steps, this.z);
+  return new Point(this.x, _y, this.z);
 };
 
 Point.prototype.right = function(steps) {
   steps = typeof steps !== 'undefined' ? steps : 1;
+  var _x = this.x + steps;
 
-  return new Point(this.x + steps, this.y, this.z);
+  return new Point(_x, this.y, this.z);
 };
 
 Point.prototype.down = function(steps) {
   steps = typeof steps !== 'undefined' ? steps : 1;
+  var _y = this.y + steps;
 
-  return new Point(this.x, this.y + steps, this.z);
+  return new Point(this.x, _y, this.z);
 };
 
 Point.prototype.left = function(steps) {
   steps = typeof steps !== 'undefined' ? steps : 1;
+  var _x = this.x - steps;
 
-  return new Point(this.x - steps, this.y, this.z);
+  return new Point(_x, this.y, this.z);
 };
 
-Point.prototype.neighbors = function(radius, flat) {
-  radius = typeof radius !== 'undefined' ? radius: 1;
-  flat = typeof flat !== 'undefined' ? flat : true;
-  excludeSelf = typeof excludeSelf !== 'undefined' ? excludeSelf: false;
+// Point.prototype.neighbors = function(radius, flat) {
+//   radius = typeof radius !== 'undefined' ? radius: 1;
+//   flat = typeof flat !== 'undefined' ? flat : true;
+//   excludeSelf = typeof excludeSelf !== 'undefined' ? excludeSelf: false;
 
-  var neighbors = [];
+//   var neighbors = [];
   
-  for(var _x = this.x - radius; _x <= this.x + radius; _x++) {
-    for(var _y = this.y - radius; _y <= this.y + radius; _y++) {
-      if(flat === false) {
-        for(var _z = this.z - radius; _z <= this.y + radius; _z++) {
-          if(this.x !== _x || this.y !== _y || this.z !== _z) {
-            neighbors.push(new Point(_x, _y, _z));
-          }
-        }
-      } else {
-        if(this.x !== _x || this.y !== _y) {
-          neighbors.push(new Point(_x, _y, this.z));
-        }
-      }
-    }
-  }
+//   for(var _x = this.x - radius; _x <= this.x + radius; _x++) {
+//     for(var _y = this.y - radius; _y <= this.y + radius; _y++) {
+//       if(flat === false) {
+//         for(var _z = this.z - radius; _z <= this.y + radius; _z++) {
+//           if(this.x !== _x || this.y !== _y || this.z !== _z) {
+//             neighbors.push(new Point(_x, _y, _z));
+//           }
+//         }
+//       } else {
+//         if(this.x !== _x || this.y !== _y) {
+//           neighbors.push(new Point(_x, _y, this.z));
+//         }
+//       }
+//     }
+//   }
 
-  return neighbors;
-};
+//   return neighbors;
+// };
 
 
 Point.prototype.inAxis = function(axis, radius) {

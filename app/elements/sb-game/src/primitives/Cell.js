@@ -1,15 +1,15 @@
-function Cell(id, type, layers) {
+function Cell(type, tag, layers) {
   'use strict';
 
-  id = typeof id !== 'undefined' ? id : Cell.defaults.id;
   type = typeof type !== 'undefined' ? type : Cell.defaults.type;
+  tag = typeof tag !== 'undefined' ? tag : Cell.defaults.tag;
   layers = typeof layers !== 'undefined' ? layers : {};
   layers.tile = typeof layers.tile !== 'undefined' ? layers.tile : Cell.defaults.tile;
   layers.furniture = typeof layers.furniture !== 'undefined' ? layers.furniture : Cell.defaults.furniture;
   layers.itens = typeof layers.itens !== 'undefined' ? layers.itens : Cell.defaults.itens;
 
-  this.id = id;
   this.type = type;
+  this.tag = tag;
   this.layers = layers;
   
   this.gfx = [];
@@ -17,8 +17,8 @@ function Cell(id, type, layers) {
 }
 
 Cell.defaults = {
-  id: 'void',
   type: 'void',
+  tag: 'void',
   tile: 'void',
   furniture: undefined,
   itens: []
@@ -48,7 +48,7 @@ Cell.prototype.updateGfx = function() {
 Cell.prototype.clone = function(constructor) {
   constructor = typeof constructor !== 'undefined' ? constructor : Cell;
 
-  var id = this.id;
+  var tag = this.tag;
   var type = this.type;
   var layers = {
     tile: this.layers.tile,
@@ -59,10 +59,14 @@ Cell.prototype.clone = function(constructor) {
   var clone;
 
   if(constructor !== Cell) {
-    clone = new constructor(id, layers);
+    clone = new constructor(tag, layers);
   } else {
-    clone = new constructor(id, type, layers);
+    clone = new Cell(type, tag, layers);
   }
 
   return clone;
+};
+
+Cell.prototype.orientation = function() {
+  return 'center';
 };

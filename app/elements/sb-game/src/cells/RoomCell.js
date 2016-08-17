@@ -1,11 +1,10 @@
-function RoomCell(id, layers) {
+function RoomCell(tag, layers) {
   'use strict';
-
+  
   layers = typeof layers !== 'undefined' ? layers : {};
-  // layers.tile = 'R'; //debug
-  layers.tile = 'floor-c';
+  layers.tile = typeof layers.tile !== 'undefined' ? layers.tile : 'RoomCell-sc-sw';
 
-  Cell.call(this, id, 'room', layers);
+  Cell.call(this, 'room', tag, layers);
 }
 
 RoomCell.prototype = Object.create(Cell.prototype);
@@ -16,3 +15,7 @@ RoomCell.prototype.clone = (function(_super) {
     return _super.call(this, RoomCell);
   };
 })(Cell.prototype.clone);
+
+RoomCell.prototype.orientation = function(matrix, pos) {
+  return 'center';
+};

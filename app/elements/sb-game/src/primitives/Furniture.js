@@ -1,4 +1,6 @@
 function Furniture(type, gfx, itens) {
+  'use strict';
+
   type = typeof type !== 'undefined' ? type : Furniture.defaults.type;
   gfx = typeof gfx !== 'undefined' ? gfx : Furniture.defaults.gfx;
   itens = typeof itens !== 'undefined' ? itens : Furniture.defaults.itens;
