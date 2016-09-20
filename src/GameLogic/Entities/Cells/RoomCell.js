@@ -1,22 +1,18 @@
-export default class RoomCell {
-  constructor(tag, layers): void {}
+import Cell from '../Cell';
 
-  
-  layers = typeof layers !== 'undefined' ? layers : {};
-  layers.tile = typeof layers.tile !== 'undefined' ? layers.tile : 'RoomCell-sc-sw';
+export default class RoomCell extends Cell {
+  constructor(tag, layers): void {
+    layers = typeof layers !== 'undefined' ? layers : {};
+    layers.tile = typeof layers.tile !== 'undefined' ? layers.tile : 'RoomCell-sc-sw';
 
-  Cell.call(this, 'room', tag, layers);
-}
+    super('room', tag, layers);
+  }
 
-RoomCell.prototype = Object.create(Cell.prototype);
-RoomCell.prototype.constructor = RoomCell;
+  clone() {
+    super.clone(RoomCell);
+  }
 
-RoomCell.prototype.clone = (function(_super) {
-  return function() {
-    return _super.call(this, RoomCell);
+  orientation(matrix: Matric, pos: Point): string {
+    return 'center';
   };
-})(Cell.prototype.clone);
-
-orientation(matrix, pos) {
-  return 'center';
-};
+}

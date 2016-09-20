@@ -1,22 +1,17 @@
-export default class Corridor {
-  constructor(tag, layers): void {}
+import Cell from '../Cell';
 
-  
-  layers = typeof layers !== 'undefined' ? layers : {};
-  layers.tile = typeof layers.tile !== 'undefined' ? layers.tile : 'Corridor-sc-sw';
+export default class Corridor extends Cell {
+  constructor(tag, layers: {} = {}): void {
+    layers.tile = typeof layers.tile !== 'undefined' ? layers.tile : 'Corridor-sc-sw';
 
-  Cell.call(this, 'corridor', tag, layers);
-}
+    super('corridor', tag, layers);
+  }
 
-Corridor.prototype = Object.create(Cell.prototype);
-Corridor.prototype.constructor = Corridor;
+  clone() {
+    super.clone(Corridor);
+  }
 
-Corridor.prototype.clone = (function(_super) {
-  return function() {
-    return _super.call(this, Corridor);
+  orientation(matrix: Matrix, pos: Point) {
+    return 'center';
   };
-})(Cell.prototype.clone);
-
-orientation(matrix, pos) {
-  return 'center';
-};
+}

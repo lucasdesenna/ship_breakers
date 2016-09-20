@@ -1,15 +1,14 @@
 export default class Item {
-  constructor(type, gfx): void {}
+  constructor(type, gfx): void {
+    type = typeof type !== 'undefined' ? type : Item.defaults.type;
+    gfx = typeof gfx !== 'undefined' ? gfx : Item.defaults.gfx;
 
+    this.type = type;
+    this.gfx = gfx;
+  }
 
-  type = typeof type !== 'undefined' ? type : Item.defaults.type;
-  gfx = typeof gfx !== 'undefined' ? gfx : Item.defaults.gfx;
-
-  this.type = type;
-  this.gfx = gfx;
+  static defaults = {
+    type: 'generic-item',
+    gfx: 'placeholder-furniture',
+  };
 }
-
-Item.defaults = {
-  type: 'generic-item',
-  gfx: 'placeholder-furniture',
-};
