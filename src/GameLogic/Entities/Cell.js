@@ -37,7 +37,9 @@ export default class Cell {
 
     if(itens.length > 0) {
       for(let i in itens) {
-        gfx.push(itens[i].gfx);
+        if ({}.hasOwnProperty.call(itens, i)) {
+          gfx.push(itens[i].gfx);
+        }
       }
     }
 

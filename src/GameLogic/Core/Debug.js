@@ -55,17 +55,17 @@ export default class Debug {
       if(typeof coord === 'string') {
         let pos = Debug.coordToPos(coord);
         let connections = Debug.getConnections(pos);
-
         let matrix = Debug.ship.matrix;
 
         Debug.ship.matrix.mark(pos);
 
         for(let c in connections) {
-          // Debug.ship.matrix.mark(connections[c]);
-          let cell = matrix.val(connections[c]);
-          console.log(c + ': ' + cell.type);
+          if ({}.hasOwnProperty.call(connections, c)) {
+            // Debug.ship.matrix.mark(connections[c]);
+            let cell = matrix.val(connections[c]);
+            console.log(c + ': ' + cell.type);
+          }
         }
-
       } else {
         console.log('nothing to mark at ' + coord);
       }
@@ -92,11 +92,13 @@ export default class Debug {
       };
 
       for(let c in connections) {
-        console.log(c + ': ' + connections[c].type);
-        if(typeof connections[c] !== 'undefined' && connections[c].type === cell.type) {
-          connections[c] = true;
-        } else {
-          connections[c] = false;
+        if ({}.hasOwnProperty.call(connections, c)) {
+          console.log(c + ': ' + connections[c].type);
+          if(typeof connections[c] !== 'undefined' && connections[c].type === cell.type) {
+            connections[c] = true;
+          } else {
+            connections[c] = false;
+          }
         }
       }
 

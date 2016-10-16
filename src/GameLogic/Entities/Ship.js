@@ -5,7 +5,7 @@ export default class Ship {
   constructor(options): void {
     this.initDefaultOptions();
     this.applyOptions(options);
-    this.buildShip();
+    this.generateShip();
   }
 
   initDefaultOptions() {
@@ -32,12 +32,14 @@ export default class Ship {
 
   applyOptions(options): void {
     for(let o in options) {
-      this[o] = options[o];
+      if ({}.hasOwnProperty.call(options, o)) {
+        this[o] = options[o];
+      }
     }
   };
 
   generateShip(): void {
-    let sEngineer = new ShipEngineer(this.matrix, this.buildOptions);
+    let sEngineer = new ShipEngineer(this, this.matrix, this.buildOptions);
 
     do {
       sEngineer.seedShip();

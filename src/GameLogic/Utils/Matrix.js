@@ -1,5 +1,5 @@
 import Boundaries from './Boundaries';
-import Cell from './Cell';
+import Cell from '../Entities/Cell';
 import Point from './Point';
 
 export default class Matrix {
@@ -123,11 +123,14 @@ export default class Matrix {
 
     if(isoTrim === true) {
       topTrim = 0;
+
       for(let tT in emptyY) {
-        if(emptyY[tT] === true && parseInt(tT, 10) === topTrim) {
-          topTrim++;
-        } else {
-          break;
+        if ({}.hasOwnProperty.call(emptyY, tT)) {
+          if(emptyY[tT] === true && parseInt(tT, 10) === topTrim) {
+            topTrim++;
+          } else {
+            break;
+          }
         }
       }
     }
@@ -173,14 +176,20 @@ export default class Matrix {
 
       case 'y':
         for(x in this.body) {
-          this.body[x].reverse();
+          if ({}.hasOwnProperty.call(this.body, x)) {
+            this.body[x].reverse();
+          }
         }
         break;
 
       case 'z':
         for(x in this.body) {
-          for(y in this.body[x]) {
-            this.body[x][y].reverse();
+          if ({}.hasOwnProperty.call(this.body, x)) {
+            for(y in this.body[x]) {
+              if ({}.hasOwnProperty.call(this.body[x], y)) {
+                this.body[x][y].reverse();
+              }
+            }
           }
         }
         break;
@@ -215,14 +224,20 @@ export default class Matrix {
 
       case 'y':
         for(x in clone.body) {
-          this.body[x].splice(start, howMany);
+          if ({}.hasOwnProperty.call(clone.body, x)) {
+            this.body[x].splice(start, howMany);
+          }
         }
         break;
 
       case 'z':
         for(x in clone.body) {
-          for(y in clone.body[x]) {
-            this.body[x][y].splice(start, howMany);
+          if ({}.hasOwnProperty.call(clone.body, x)) {
+            for(y in clone.body[x]) {
+              if ({}.hasOwnProperty.call(clone.body[x], y)) {
+                this.body[x][y].splice(start, howMany);
+              }
+            }
           }
         }
         break;
@@ -270,14 +285,20 @@ export default class Matrix {
 
       case 'y':
         for(x in extension.body) {
-          this.body[x] = this.body[x].concat(extension.body[x]);
+          if ({}.hasOwnProperty.call(extension.body, x)) {
+            this.body[x] = this.body[x].concat(extension.body[x]);
+          }
         }
         break;
 
       case 'z':
         for(x in extension.body) {
-          for(y in extension.body[x]) {
-            this.body[x][y] = this.body[x][y].concat(extension.body[x][y]);
+          if ({}.hasOwnProperty.call(extension.body, x)) {
+            for(y in extension.body[x]) {
+              if ({}.hasOwnProperty.call(extension.body[x], y)) {
+                this.body[x][y] = this.body[x][y].concat(extension.body[x][y]);
+              }
+            }
           }
         }
         break;
@@ -314,25 +335,30 @@ export default class Matrix {
 
 
     for(let x in body) {
-      _x = xCenter + xOffset;
+      if ({}.hasOwnProperty.call(body, x)) {
+        _x = xCenter + xOffset;
 
-      for(let y in body[x]) {
-        pos = new Point(x, y, 0);
-        cell = this.val(pos);
+        for(let y in body[x]) {
+          if ({}.hasOwnProperty.call(body[x], y)) {
+            pos = new Point(x, y, 0);
+            cell = this.val(pos);
 
-        _y = parseInt(y, 10) + yOffset;
+            _y = parseInt(y, 10) + yOffset;
 
-        if(_y%2 === 0) _x--;
+            if(_y%2 === 0) _x--;
 
-        _pos = new Point(_x, _y, 0);
-        clone.val(_pos, cell);
+            _pos = new Point(_x, _y, 0);
+            clone.val(_pos, cell);
 
-        let coord = x + ':' + y + ':' + 0;
-        let isoCoord = _x + ':' + _y + ':' + 0;
-        originalCoords[isoCoord] = coord;
+            let coord = x + ':' + y + ':' + 0;
+            let isoCoord = _x + ':' + _y + ':' + 0;
+            originalCoords[isoCoord] = coord;
+          }
+        }
+        
+        if(parseInt(x, 10)%2 === 1) xOffset++;
+        yOffset++;
       }
-      if(parseInt(x, 10)%2 === 1) xOffset++;
-      yOffset++;
     }
 
     // clone.trim(true);

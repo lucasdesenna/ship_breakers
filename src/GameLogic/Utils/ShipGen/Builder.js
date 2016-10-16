@@ -110,22 +110,23 @@ export default class Builder {
     let newPos;
 
     for(let d in directions) {
-      direction = directions[d];
-      newPos = pos[direction]();
+      if ({}.hasOwnProperty.call(directions, d)) {
+        direction = directions[d];
+        newPos = pos[direction]();
 
-      if(
-        this.tgtMatrix.contains(newPos) &&
-        (!excludeCurrentAndReverse ||
-          (excludeCurrentAndReverse &&
-            direction !== this.reverseDirection() &&
-            direction !== this.direction)
-          )
-        ) {
-          pDirections.push(direction);
+        if(this.tgtMatrix.contains(newPos) &&
+          (!excludeCurrentAndReverse ||
+            (excludeCurrentAndReverse &&
+              direction !== this.reverseDirection() &&
+              direction !== this.direction)
+            )
+          ) {
+            pDirections.push(direction);
+          }
         }
-      }
 
-      return pDirections;
+        return pDirections;
+      }
     };
 
     moveOrTurn() {
@@ -233,13 +234,15 @@ export default class Builder {
       let vDirections = [];
 
       for(let pD in pDirections) {
-        direction = pDirections[pD];
+        if ({}.hasOwnProperty.call(pDirections, pD)) {
+          direction = pDirections[pD];
 
-        if(
-          this.validMove(pos0[direction](), direction) !== false &&
-          this.validMove(pos0[direction](2), direction) !== false
-        ) {
-          vDirections.push(direction);
+          if(
+            this.validMove(pos0[direction](), direction) !== false &&
+            this.validMove(pos0[direction](2), direction) !== false
+          ) {
+            vDirections.push(direction);
+          }
         }
       }
 

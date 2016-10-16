@@ -1,11 +1,13 @@
 import Ship from '../../Entities/Ship';
 import Wall from '../../Entities/Cells/Wall';
+import Matrix from '../Matrix';
 import Boundaries from '../Boundaries';
 import Tool from '../Tool';
 import Point from '../Point';
 
 export default class ShipEngineer {
-  constructor(targetMatrix: Matrix, buildOptions): void {
+  constructor(ship: Ship, targetMatrix: Matrix, buildOptions): void {
+    this.ship = ship;
     this.targetMatrix = targetMatrix;
     this.buildOptions = buildOptions;
 
@@ -61,7 +63,7 @@ export default class ShipEngineer {
 
   addConnector(options): void {
     options = typeof options !== 'undefined' ? options : {};
-    options.connectorMaxLength = typeof options.connectorMaxLength !== 'undefined' ? options.connectorMaxLength : Ship.gen.params.connectorMaxLength;
+    options.connectorMaxLength = typeof options.connectorMaxLength !== 'undefined' ? options.connectorMaxLength : this.ship.buildOptions.connectorMaxLength;
 
     this.addBuilder('Connector', options);
   };
@@ -113,7 +115,9 @@ export default class ShipEngineer {
 
     while(builders.current.length > 0) {
       for(let b in builders.current) {
-        builders.current[b].work();
+        if ({}.hasOwnProperty.call(builders.current, b)) {
+          builders.current[b].work();
+        }
       }
       this.recycle();
     }
@@ -129,7 +133,9 @@ export default class ShipEngineer {
     while(dormants.length > 0) {
       let currentDormants = dormants[dormants.length - 1];
       for(let f in currentDormants) {
-        currentDormants[f].work();
+        if ({}.hasOwnProperty.call(currentDormants, f)) {
+          currentDormants[f].work();
+        }
       }
       this.recycleDormants();
     }
@@ -200,14 +206,16 @@ export default class ShipEngineer {
     let cCount;
 
     for(let r in rooms) {
-      roomLog = rooms[r];
-      boundaries = roomLog.room.matrix.boundaries;
-      pos = roomLog.pos;
+      if ({}.hasOwnProperty.call(rooms, r)) {
+        roomLog = rooms[r];
+        boundaries = roomLog.room.matrix.boundaries;
+        pos = roomLog.pos;
 
-      cCount = Ship.gen.params.connectorsPerRoom();
+        cCount = this.ship.buildOptions.connectorsPerRoom();
 
-      for(cCount; cCount > 0; cCount--) {
-        this.addConnector({startingPos: cPos(pos, boundaries), originId: roomLog.id});
+        for(cCount; cCount > 0; cCount--) {
+          this.addConnector({startingPos: cPos(pos, boundaries), originId: roomLog.id});
+        }
       }
     }
 
@@ -243,12 +251,12 @@ export default class ShipEngineer {
     if(roomCount%2 === 0) roomCount++;
 
     let boundaries = new Boundaries(
-      roomCount * Ship.gen.params.sizeFactor,
-      roomCount * Ship.gen.params.sizeFactor,
+      roomCount * this.ship.buildOptions.sizeFactor,
+      roomCount * this.ship.buildOptions.sizeFactor,
       21
     );
 
-    let matrix = new Matrix(boundaries, Ship.gen.params.roomPaddings);
+    let matrix = new Matrix(boundaries, this.ship.buildOptions.roomPaddings);
     matrix.flatten(); //change to enable 3D placement
 
     this.tgtMatrix = matrix;
@@ -320,7 +328,9 @@ export default class ShipEngineer {
     };
 
     for(let r in rooms) {
-      tgtMatrix.iterate(update,r);
+      if ({}.hasOwnProperty.call(rooms, r)) {
+        tgtMatrix.iterate(update,r);
+      }
     }
     // console.log(rooms);
     this.ship.rooms = rooms;
@@ -356,12 +366,14 @@ export default class ShipEngineer {
     let pos;
 
     for(let r in rooms) {
-      id = rooms[r].id + idOffset;
-      pos = rooms[r].pos;
-      room = rooms[r].room.clone(id);
-      this.logRoom(room, pos);
+      if ({}.hasOwnProperty.call(rooms, r)) {
+        id = rooms[r].id + idOffset;
+        pos = rooms[r].pos;
+        room = rooms[r].room.clone(id);
+        this.logRoom(room, pos);
 
-      room.matrix.transferTo(mirror, pos);
+        room.matrix.transferTo(mirror, pos);
+      }
     }
 
     mirror.flip(axis);

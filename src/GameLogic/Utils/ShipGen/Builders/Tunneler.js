@@ -30,10 +30,12 @@ export default class Tunneler extends Builder {
     let index;
 
     for(let bDir in bDirections) {
-      index = pDirections.indexOf(bDirections[bDir]);
+      if ({}.hasOwnProperty.call(bDirections, bDir)) {
+        index = pDirections.indexOf(bDirections[bDir]);
 
-      if(index !== -1) {
-        pDirections.splice(index, 1);
+        if(index !== -1) {
+          pDirections.splice(index, 1);
+        }
       }
     }
 
@@ -110,16 +112,18 @@ export default class Tunneler extends Builder {
 
     let cell;
     for(let p in poses) {
-      if(tunneler.tgtMatrix.contains(poses[p])) {
-        cell = tgtMatrix.val(poses[p]);
+      if ({}.hasOwnProperty.call(poses, p)) {
+        if(tunneler.tgtMatrix.contains(poses[p])) {
+          cell = tgtMatrix.val(poses[p]);
 
-        if(cell.type !== 'void') {
-          // console.log('sides invalid');
+          if(cell.type !== 'void') {
+            // console.log('sides invalid');
+            return false;
+          }
+        } else {
+          // console.log('not contained in matrix');
           return false;
         }
-      } else {
-        // console.log('not contained in matrix');
-        return false;
       }
     }
 

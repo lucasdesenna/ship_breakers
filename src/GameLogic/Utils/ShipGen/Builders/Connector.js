@@ -54,14 +54,16 @@ export default class Connector extends Builder {
     let cell;
 
     for(let p in poses) {
-      if(tgtMatrix.contains(poses[p])) {
-        cell = tgtMatrix.val(poses[p]);
+      if ({}.hasOwnProperty.call(poses, p)) {
+        if(tgtMatrix.contains(poses[p])) {
+          cell = tgtMatrix.val(poses[p]);
 
-        if(cell.type !== 'void' && cell.type !== 'room') {
+          if(cell.type !== 'void' && cell.type !== 'room') {
+            return false;
+          }
+        } else {
           return false;
         }
-      } else {
-        return false;
       }
     }
 
@@ -77,11 +79,13 @@ export default class Connector extends Builder {
 
     if(path.length > 0 && this.isConnected) {
       for(let p in path) {
-        pos = path[p];
-        cell = tgtMatrix.val(pos);
+        if ({}.hasOwnProperty.call(path, p)) {
+          pos = path[p];
+          cell = tgtMatrix.val(pos);
 
-        if(cell.type === 'void') {
-          corridor.transferTo(tgtMatrix, pos);
+          if(cell.type === 'void') {
+            corridor.transferTo(tgtMatrix, pos);
+          }
         }
       }
     }

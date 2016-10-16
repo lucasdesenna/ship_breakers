@@ -28,10 +28,12 @@ export default class Wall extends Cell {
     };
 
     for(let c in connections) {
-      if(typeof connections[c] !== 'undefined' && connections[c].type === cell.type) {
-        connections[c] = true;
-      } else {
-        connections[c] = false;
+      if ({}.hasOwnProperty.call(connections, c)) {
+        if(typeof connections[c] !== 'undefined' && connections[c].type === cell.type) {
+          connections[c] = true;
+        } else {
+          connections[c] = false;
+        }
       }
     }
 

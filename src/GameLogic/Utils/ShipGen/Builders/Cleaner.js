@@ -68,13 +68,15 @@ export default class Cleaner extends Builder {
         parallels = pos.parallels(radius, width);
 
         for(let p in parallels) {
-          if(tgtMatrix.contains(parallels[p])) {
-            let cell = tgtMatrix.val(parallels[p]);
+          if ({}.hasOwnProperty.call(parallels, p)) {
+            if(tgtMatrix.contains(parallels[p])) {
+              let cell = tgtMatrix.val(parallels[p]);
 
-            if(cell.type === 'corridor' && cell.id === tgtId) {
-              connectionsSelf++;
-            } else if(cell.type !== 'void') {
-              connectionsOthers++;
+              if(cell.type === 'corridor' && cell.id === tgtId) {
+                connectionsSelf++;
+              } else if(cell.type !== 'void') {
+                connectionsOthers++;
+              }
             }
           }
         }

@@ -10,7 +10,7 @@ export default class Tool {
     let clone = {};
 
     for(let o in object) {
-      if ({}.hasOwnProperty.call(o, object)) {
+      if ({}.hasOwnProperty.call(object, o)) {
         clone[o] = object[o];
       }
     }
@@ -94,7 +94,7 @@ export default class Tool {
       }
     } else {
       for(let a in obj) {
-        if ({}.hasOwnProperty.call(a, obj)) {
+        if ({}.hasOwnProperty.call(obj, a)) {
           attrs.push(a);
         }
       }
@@ -137,7 +137,7 @@ export default class Tool {
     let realRuleSet = codici;
 
     for(let rs in ruleString) {
-      if ({}.hasOwnProperty.call(rs, ruleString)) {
+      if ({}.hasOwnProperty.call(ruleString, rs)) {
         realRuleSet = realRuleSet[ruleString[rs]];
       }
     }
