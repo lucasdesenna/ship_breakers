@@ -1,0 +1,19 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "outDir": "./dist/",
+    "sourceMap": true,
+    "noImplicitAny": true,
+    "module": "commonjs",
+    "types": [
+      "react",
+      "react-dom",
+      "node"
+    ],
+    "target": "es5",
+    "jsx": "react"
+  },
+  "include": [
+    "./src/**/*.tsx"
+  ]
+}

@@ -3,24 +3,32 @@
   "version": "0.1.0",
   "private": true,
   "devDependencies": {
-    "flow-bin": "^0.32.0",
-    "react-scripts": "0.4.1"
+    "html-loader": "^0.4.4",
+    "open-browser-webpack-plugin": "0.0.3",
+    "react-hot-loader": "^3.0.0-beta.6",
+    "source-map-loader": "^0.1.5",
+    "stylus": "^0.54.5",
+    "stylus-loader": "^2.3.1",
+    "ts-loader": "^1.0.0",
+    "webpack": "^1.13.3",
+    "webpack-dev-server": "^1.16.2"
   },
   "dependencies": {
-    "pixi.js": "^4.0.1",
-    "react": "^15.3.1",
-    "react-dom": "^15.3.1"
+    "@types/node": "^6.0.46",
+    "@types/react": "^0.14.44",
+    "@types/react-dom": "^0.14.18",
+    "css-loader": "^0.25.0",
+    "react": "^15.3.2",
+    "react-dom": "^15.3.2",
+    "style-loader": "^0.13.1",
+    "svg-react-loader": "^0.3.7",
+    "svg-url-loader": "^1.1.0",
+    "typescript": "^2.0.7"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "start": "webpack-dev-server --hot --inline",
+    "build": "webpack",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
-  },
-  "eslintConfig": {
-    "extends": "./node_modules/react-scripts/config/eslint.js",
-    "rules": {
-      "guard-for-in": "off"
-    }
   }
 }
